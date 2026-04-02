@@ -29,13 +29,47 @@ export class Spacecraft {
         cm.receiveShadow = true;
         group.add(cm);
 
-        // Fenêtre du hublot (un petit disque noir à l'avant)
-        const windowGeo = new THREE.CircleGeometry(0.05, 16);
-        const windowMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-        const window = new THREE.Mesh(windowGeo, windowMat);
-        window.position.z = 0.41; // Juste devant le sommet
-        window.position.y = 0.05;
-        cm.add(window);
+        // Fenêtres des hublots (un ensemble de fenêtres réparties)
+        const windowGeo = new THREE.CircleGeometry(0.04, 16);
+        const windowMat = new THREE.MeshPhongMaterial({ 
+            color: 0x111111, 
+            shininess: 200, 
+            specular: 0x444444 
+        });
+
+        // Fenêtre centrale avant
+        const windowFront = new THREE.Mesh(windowGeo, windowMat);
+        windowFront.position.set(0, 0.08, 0.205); // Placée sur la pente du cône
+        windowFront.rotation.x = -Math.PI / 12; // Inclinée selon la pente du CM
+        cm.add(windowFront);
+
+        // Fenêtres latérales (2 de chaque côté)
+        for (let i = 0; i < 2; i++) {
+            const sideWindow = new THREE.Mesh(windowGeo, windowMat);
+            const sideAngle = (i === 0 ? 1 : -1) * Math.PI / 4;
+            sideWindow.position.set(Math.sin(sideAngle) * 0.3, 0.05, 0.2);
+            sideWindow.rotation.y = sideAngle;
+            sideWindow.rotation.x = -Math.PI / 12;
+            cm.add(sideWindow);
+        }
+
+        // --- Lumières de Position (LEDs de navigation) ---
+        const ledGeo = new THREE.SphereGeometry(0.015, 8, 8);
+        const redLedMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const greenLedMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const whiteLedMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        const leftLed = new THREE.Mesh(ledGeo, redLedMat);
+        leftLed.position.set(-0.48, 0, 0); // Bord gauche du CM
+        cm.add(leftLed);
+
+        const rightLed = new THREE.Mesh(ledGeo, greenLedMat);
+        rightLed.position.set(0.48, 0, 0); // Bord droit du CM
+        cm.add(rightLed);
+
+        const topLed = new THREE.Mesh(ledGeo, whiteLedMat);
+        topLed.position.set(0, 0.15, 0.15); // Sommet du CM
+        cm.add(topLed);
 
         // --- Module de Service (SM) - Le cylindre technique ---
         // Rayon: 0.5, Hauteur: 0.5
@@ -47,6 +81,29 @@ export class Spacecraft {
         sm.castShadow = true;
         sm.receiveShadow = true;
         group.add(sm);
+
+        // --- Détails du SM : Radiateurs et Antennes ---
+        // Bandes verticales (Radiateurs)
+        const radGeo = new THREE.PlaneGeometry(0.1, 0.45);
+        const radMat = new THREE.MeshPhongMaterial({ color: 0xbbbbbb, shininess: 30 });
+        for (let i = 0; i < 8; i++) {
+            const rad = new THREE.Mesh(radGeo, radMat);
+            const angle = (i * Math.PI * 2) / 8;
+            rad.position.set(Math.cos(angle) * 0.501, Math.sin(angle) * 0.501, 0);
+            rad.rotation.z = angle + Math.PI / 2;
+            sm.add(rad);
+        }
+
+        // Antennes (4 petites antennes paraboliques ou fouets)
+        const antGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 8);
+        const antMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+        for (let i = 0; i < 2; i++) {
+            const ant = new THREE.Mesh(antGeo, antMat);
+            const angle = (i * Math.PI) + Math.PI/2;
+            ant.position.set(Math.cos(angle) * 0.45, Math.sin(angle) * 0.45, 0.2);
+            ant.rotation.z = angle + Math.PI/2;
+            sm.add(ant);
+        }
 
         // Adaptateur / Section arrière (un peu plus étroite)
         const adapterGeo = new THREE.CylinderGeometry(0.5, 0.4, 0.1, 32);
