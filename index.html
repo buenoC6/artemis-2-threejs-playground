@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artemis 2 - Mission Viz</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-black text-white">
+    <div id="app"></div>
+    <!-- UI Layer - Nouveau design éclaté (Outil) -->
+    <div id="ui-layer" class="fixed inset-0 p-4 pointer-events-none z-10 font-sans">
+        
+        <!-- Header: Titre et bouton LIVE -->
+        <div class="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-lg flex justify-between items-center bg-black/40 backdrop-blur-lg px-4 py-2 rounded-full border border-white/10 pointer-events-auto">
+            <h1 class="text-sm md:text-base font-bold tracking-widest uppercase italic">Artemis II <span class="text-blue-400 font-normal not-italic tracking-normal lowercase">mission viz</span></h1>
+            <button id="live-btn" class="px-4 py-1 rounded-full bg-red-600 text-[10px] font-bold animate-pulse hover:bg-red-500 transition-colors shadow-lg shadow-red-900/20">LIVE</button>
+        </div>
+
+        <!-- Left Panel: Télémétrie -->
+        <div class="absolute top-20 left-4 w-48 space-y-2 pointer-events-auto">
+            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1">Télémétrie en temps réel</p>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-gray-500 text-[8px] uppercase">Temps Mission</p>
+                        <span id="mission-day" class="font-mono text-white text-xs block">Jour J+1</span>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-[8px] uppercase">Vitesse</p>
+                        <span id="speed-info" class="font-mono text-green-400 text-xs block">24,500 km/h</span>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-[8px] uppercase">Température</p>
+                        <span id="temp-info" class="font-mono text-orange-400 text-xs block">-150 °C</span>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-[8px] uppercase">Distance Terre</p>
+                        <span id="distance-info" class="font-mono text-white text-xs block">0 km</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="comms-status" class="bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 flex items-center justify-between">
+                <span class="text-[8px] text-gray-400 uppercase tracking-tighter">Signal: <span id="signal-delay" class="text-green-500 font-mono lowercase italic">0.0s</span></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
+            </div>
+        </div>
+
+        <!-- Right Panel: Navigation / Caméra -->
+        <div class="absolute top-20 right-4 w-40 space-y-2 pointer-events-auto text-right">
+            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Navigation</p>
+                <div class="flex flex-col gap-1">
+                    <button id="cam-system" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Système Solaire</button>
+                    <button id="cam-orion" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all italic">Suivi Vaisseau Orion</button>
+                    <button id="cam-hublot" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Vue Hublot (POV)</button>
+                    <button id="cam-moon" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Observation Lunaire</button>
+                </div>
+            </div>
+
+            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Équipage (Bio-Data)</p>
+                <div class="space-y-2 text-left">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[8px] text-gray-400">PULSATIONS</span>
+                        <span id="bio-heart" class="text-[10px] font-mono text-red-400">72 BPM</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[8px] text-gray-400">OXYGÈNE</span>
+                        <span id="bio-o2" class="text-[10px] font-mono text-blue-400">98%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[8px] text-gray-400">RADIATIONS</span>
+                        <span id="bio-rad" class="text-[10px] font-mono text-yellow-500">0.05 mSv/h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Options de Vue</p>
+                <div class="grid grid-cols-2 gap-1">
+                    <button id="toggle-stars" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Étoiles: ON</button>
+                    <button id="toggle-grid" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Grille: ON</button>
+                    <button id="toggle-van-allen" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Belts: ON</button>
+                    <button id="toggle-orbit" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Orbite: ON</button>
+                    <button id="toggle-forces" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left col-span-2">Forces Gravitationnelles: OFF</button>
+                    <button id="snap-btn" class="text-[8px] py-1.5 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded border border-blue-500/30 transition-all text-left col-span-2">📸 Prendre une Photo</button>
+                    <div class="col-span-2 flex flex-col gap-1 bg-purple-600/10 p-1.5 rounded border border-purple-500/20">
+                        <div class="flex justify-between items-center">
+                            <button id="toggle-audio" class="text-[8px] text-purple-300 hover:text-purple-100 transition-all">🎵 Audio: ON</button>
+                            <span id="vol-value" class="text-[7px] text-purple-400 font-mono">30%</span>
+                        </div>
+                        <input type="range" id="volume-slider" min="0" max="100" value="30" class="w-full h-1 bg-purple-900/30 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Center: Timeline -->
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-auto">
+            <div class="bg-black/40 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
+                <div class="relative w-full mb-1 px-1">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[8px] text-gray-500 uppercase tracking-widest">Lancement (T+0)</span>
+                        <span class="text-[8px] text-gray-500 uppercase tracking-widest">Amérissage (T+10j)</span>
+                    </div>
+                </div>
+                <div class="relative w-full h-6 flex items-center">
+                    <div id="timeline-markers" class="absolute inset-x-1 inset-y-0 pointer-events-none flex items-center"></div>
+                    <input type="range" id="timeline-slider" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500 transition-all hover:h-2 z-10" min="0" max="100" value="0">
+                </div>
+                <p id="slider-hint" class="text-[8px] text-center text-gray-600 mt-2 italic tracking-tight opacity-50">Désactivation automatique du mode LIVE si manipulé</p>
+            </div>
+        </div>
+
+        <!-- Notifications et Toast (Flottant) -->
+        <div class="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm">
+            <div id="milestone-toast" class="p-3 bg-blue-900/60 backdrop-blur-lg border border-blue-400/30 rounded-xl text-xs hidden shadow-[0_0_20px_rgba(59,130,246,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div class="flex items-start gap-2">
+                    <span class="text-blue-400">ℹ️</span>
+                    <div>
+                        <span class="font-bold block text-blue-200">Point de Passage :</span>
+                        <span id="milestone-text" class="text-gray-200 leading-tight">Injection Trans-Lunaire</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="van-allen-alert" class="mt-2 p-2 bg-yellow-900/60 backdrop-blur-md border border-yellow-400/30 rounded-xl text-[9px] hidden text-yellow-100 animate-pulse text-center">
+                ☢️ TRAVERSÉE DES CEINTURES DE VAN ALLEN - BOUCLIERS ACTIFS
+            </div>
+        </div>
+    </div>
+
+    <!-- Hublot Overlay (POV) -->
+    <div id="hublot-overlay" class="fixed inset-0 pointer-events-none hidden z-0">
+        <div class="absolute inset-0 border-[40px] border-black/80 rounded-[100px] shadow-[inset_0_0_100px_rgba(0,0,0,0.9)]"></div>
+        <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-transparent opacity-30"></div>
+    </div>
+
+    <!-- Modale Hotspot -->
+    <div id="hotspot-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden pointer-events-auto">
+        <div class="bg-zinc-900 border border-white/20 p-6 rounded-xl max-w-sm w-full">
+            <h3 id="modal-title" class="text-xl font-bold mb-2">Cratère Shackleton</h3>
+            <p id="modal-desc" class="text-sm text-gray-300 mb-4">Le Pôle Sud lunaire contient de la glace d'eau dans ses cratères éternellement ombragés, une ressource vitale pour les futures bases Artemis.</p>
+            <button id="close-modal" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition-colors">FERMER</button>
+        </div>
+    </div>
+    <script type="module" src="/main.js"></script>
+</body>
+</html>
