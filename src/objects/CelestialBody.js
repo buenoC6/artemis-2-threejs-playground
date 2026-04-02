@@ -20,6 +20,8 @@ export class CelestialBody {
         this.currentDist = 100; // Distance par défaut
 
         if (this.name === 'Earth') {
+            this.clouds = this.createClouds();
+            this.mesh.add(this.clouds);
             this.atmosphere = this.createAtmosphere();
             this.mesh.add(this.atmosphere);
             this.vanAllen = this.createVanAllenBelts();
@@ -31,6 +33,19 @@ export class CelestialBody {
             this.glow = this.createSunGlow();
             this.mesh.add(this.glow);
         }
+    }
+
+    createClouds() {
+        const geometry = new THREE.SphereGeometry(this.radius * 1.015, 128, 128);
+        const material = new THREE.MeshPhongMaterial({
+            map: new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/earth_clouds_2048.png'),
+            transparent: true,
+            opacity: 0.6,
+            depthWrite: false
+        });
+        const clouds = new THREE.Mesh(geometry, material);
+        clouds.name = 'EarthClouds';
+        return clouds;
     }
 
     createSunGlow() {
@@ -54,6 +69,26 @@ export class CelestialBody {
             material = new THREE.MeshBasicMaterial({
                 color: 0xffffff
             });
+        } else if (this.name === 'Earth') {
+            const loader = new THREE.TextureLoader();
+            material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 15,
+                map: loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
+                specularMap: loader.load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg'),
+                normalMap: loader.load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg'),
+                normalScale: new THREE.Vector2(0.85, 0.85)
+            });
+        } else if (this.name === 'Moon') {
+            const loader = new THREE.TextureLoader();
+            material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 0,
+                map: loader.load('https://threejs.org/examples/textures/planets/moon_1024.jpg'),
+                // La texture de la Lune sur threejs.org n'a pas toujours de normalMap standard de planète, 
+                // mais on peut utiliser celle-ci si elle existe ou s'en tenir à la map diffuse.
+                // On va utiliser la map 1024 disponible.
+            });
         } else {
             material = new THREE.MeshPhongMaterial({
                 color: this.name === 'Earth' ? 0x2233ff : 0x888888,
@@ -61,14 +96,13 @@ export class CelestialBody {
             });
         }
 
-        if (this.texturePath) {
+        if (this.texturePath && this.name !== 'Earth' && this.name !== 'Sun') {
             const loader = new THREE.TextureLoader();
             loader.load(this.texturePath, (texture) => {
                 material.map = texture;
                 material.needsUpdate = true;
             });
         }
-
         const mesh = new THREE.Mesh(geometry, material);
         mesh.name = this.name;
         
@@ -210,6 +244,12 @@ export class CelestialBody {
             
             this.mesh.position.x = Math.cos(angle) * dist;
             this.mesh.position.z = Math.sin(angle) * dist;
+            
+            // Animation des nuages
+            if (this.clouds) {
+                this.clouds.rotation.y += 0.0001;
+                this.clouds.rotation.z += 0.00005;
+            }
             
             // Rotation propre de la Terre (1 tour par jour) - Désactivée à la demande de l'utilisateur pour simplification
             // this.mesh.rotation.y = percent * 10 * Math.PI * 2;
