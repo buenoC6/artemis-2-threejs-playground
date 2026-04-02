@@ -22,5 +22,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
