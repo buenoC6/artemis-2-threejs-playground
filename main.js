@@ -79,8 +79,20 @@ earth.getMesh().add(orion.getMesh());
 // Variable pour stocker la position mondiale suivante pour lookAt
 const nextPosWorld = new THREE.Vector3();
 
-// Ajustement caméra initiale (Vue Orion par défaut)
-sceneManager.setCameraTarget(orion.getMesh(), new THREE.Vector3(5, 2, 5));
+// Positionner la caméra loin pour le travelling de départ (vue large du système solaire)
+sceneManager.camera.position.set(2000, 1000, 5000);
+sceneManager.camera.lookAt(0, 0, 0);
+
+// Ajustement caméra initiale (Travelling vers Orion) après un court délai pour laisser le temps au rendu de démarrer
+setTimeout(() => {
+    // Premier passage : On se rapproche de la Terre
+    sceneManager.setCameraTarget(earth.getMesh(), new THREE.Vector3(500, 200, 500), null, 0.02);
+    
+    // Deuxième passage : On fonce vers Orion après 3 secondes
+    setTimeout(() => {
+        sceneManager.setCameraTarget(orion.getMesh(), new THREE.Vector3(5, 2, 5), null, 0.05);
+    }, 3000);
+}, 1000);
 
 // Audio par défaut (Tentative immédiate et fallback)
 const startAudio = () => {

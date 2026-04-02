@@ -298,10 +298,11 @@ export class SceneManager {
         this.composer.addPass(outputPass);
     }
 
-    setCameraTarget(target, offset = new THREE.Vector3(20, 10, 20), lookAtPos = null) {
+    setCameraTarget(target, offset = new THREE.Vector3(20, 10, 20), lookAtPos = null, speed = 0.05) {
         this.cameraTarget = target;
         this.cameraOffset.copy(offset);
         this.lookAtTarget = lookAtPos;
+        this.lerpSpeed = speed; // Permettre d'ajuster la vitesse du lerp
         this.isLerping = true;
         
         // Désactiver temporairement les contrôles pour la transition
@@ -324,6 +325,8 @@ export class SceneManager {
             targetPos.set(0, 0, 0); 
         }
 
+        const lerpFactor = this.lerpSpeed || 0.05;
+
         if (!this.isLerping) {
             // Si on a une cible mais qu'on ne lerp plus, on suit la cible de manière instantanée
             if (this.cameraTarget) {
@@ -343,7 +346,7 @@ export class SceneManager {
         const desiredPos = targetPos.clone().add(this.cameraOffset);
         
         // Transition fluide (Lerp)
-        this.camera.position.lerp(desiredPos, 0.05);
+        this.camera.position.lerp(desiredPos, lerpFactor);
         
         // Initialisation du lookAtProxy si nécessaire pour éviter les sauts brusques
         if (!this.lookAtProxy) {
@@ -351,9 +354,9 @@ export class SceneManager {
             this.camera.getWorldDirection(this.lookAtProxy);
             this.lookAtProxy.add(this.camera.position);
         }
-        this.lookAtProxy.lerp(lookTarget, 0.05);
+        this.lookAtProxy.lerp(lookTarget, lerpFactor);
         this.camera.lookAt(this.lookAtProxy);
-        this.controls.target.lerp(lookTarget, 0.05);
+        this.controls.target.lerp(lookTarget, lerpFactor);
 
         // Désactiver l'interpolation si on est très proche
         if (this.camera.position.distanceTo(desiredPos) < 0.1 && this.lookAtProxy.distanceTo(lookTarget) < 0.1) {

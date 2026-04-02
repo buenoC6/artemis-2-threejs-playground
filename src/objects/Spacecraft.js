@@ -18,27 +18,73 @@ export class Spacecraft {
     createMesh() {
         const group = new THREE.Group();
 
-        // Corps principal
-        const geometry = new THREE.ConeGeometry(0.5, 1, 16);
-        const material = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 100 });
-        const cone = new THREE.Mesh(geometry, material);
-        cone.rotation.x = Math.PI / 2;
-        cone.castShadow = true;
-        cone.receiveShadow = true;
-        group.add(cone);
+        // --- Module de Commande (CM) - La capsule pressurisée (cône tronqué) ---
+        // Rayon haut: 0.15, Rayon bas: 0.5, Hauteur: 0.4
+        const cmGeo = new THREE.CylinderGeometry(0.15, 0.5, 0.4, 32);
+        const cmMat = new THREE.MeshPhongMaterial({ color: 0xeeeeee, shininess: 80 }); // Blanc brillant / Aluminium
+        const cm = new THREE.Mesh(cmGeo, cmMat);
+        cm.rotation.x = Math.PI / 2;
+        cm.position.z = 0.2; // Placé vers l'avant
+        cm.castShadow = true;
+        cm.receiveShadow = true;
+        group.add(cm);
 
-        // Bouclier thermique
-        const shieldGeo = new THREE.CylinderGeometry(0.5, 0.4, 0.2, 16);
-        const shieldMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
-        const shield = new THREE.Mesh(shieldGeo, shieldMat);
-        shield.position.z = -0.5;
-        shield.rotation.x = Math.PI / 2;
-        shield.castShadow = true;
-        shield.receiveShadow = true;
-        group.add(shield);
+        // Fenêtre du hublot (un petit disque noir à l'avant)
+        const windowGeo = new THREE.CircleGeometry(0.05, 16);
+        const windowMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        const window = new THREE.Mesh(windowGeo, windowMat);
+        window.position.z = 0.41; // Juste devant le sommet
+        window.position.y = 0.05;
+        cm.add(window);
 
-        // Moteur / Tuyère (pour le bloom)
-        const engineGeo = new THREE.CylinderGeometry(0.2, 0.3, 0.2, 8);
+        // --- Module de Service (SM) - Le cylindre technique ---
+        // Rayon: 0.5, Hauteur: 0.5
+        const smGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 32);
+        const smMat = new THREE.MeshPhongMaterial({ color: 0xdddddd, shininess: 50 });
+        const sm = new THREE.Mesh(smGeo, smMat);
+        sm.rotation.x = Math.PI / 2;
+        sm.position.z = -0.25; // Placé derrière le CM
+        sm.castShadow = true;
+        sm.receiveShadow = true;
+        group.add(sm);
+
+        // Adaptateur / Section arrière (un peu plus étroite)
+        const adapterGeo = new THREE.CylinderGeometry(0.5, 0.4, 0.1, 32);
+        const adapter = new THREE.Mesh(adapterGeo, smMat);
+        adapter.rotation.x = Math.PI / 2;
+        adapter.position.z = -0.55;
+        group.add(adapter);
+
+        // --- Panneaux Solaires (4 panneaux en croix) ---
+        const solarMat = new THREE.MeshPhongMaterial({ 
+            color: 0x112244, 
+            shininess: 150,
+            specular: 0x3366ff
+        });
+        
+        // Un panneau fait environ 1.5 de long et 0.4 de large
+        const panelGeo = new THREE.BoxGeometry(1.5, 0.02, 0.4);
+        
+        for (let i = 0; i < 4; i++) {
+            const panel = new THREE.Mesh(panelGeo, solarMat);
+            // On les écarte du centre du SM
+            const angle = (i * Math.PI) / 2 + Math.PI / 4; // Décalés de 45°
+            const dist = 0.5; // Rayon du SM
+            
+            panel.position.x = Math.cos(angle) * (dist + 0.75); // + 0.75 car le centre du panneau est à la moitié de sa longueur
+            panel.position.y = Math.sin(angle) * (dist + 0.75);
+            panel.position.z = -0.25; // Alignés avec le SM
+            
+            // On oriente le panneau vers le centre
+            panel.rotation.z = angle;
+            
+            panel.castShadow = true;
+            panel.receiveShadow = true;
+            group.add(panel);
+        }
+
+        // --- Moteur / Tuyère principal ---
+        const engineGeo = new THREE.CylinderGeometry(0.1, 0.2, 0.2, 16);
         const engineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
         this.engineMesh = new THREE.Mesh(engineGeo, engineMat);
         this.engineMesh.position.z = -0.7;
