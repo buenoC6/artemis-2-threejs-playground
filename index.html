@@ -51,11 +51,11 @@
         <div class="absolute top-20 right-4 w-40 space-y-2 pointer-events-auto text-right">
             <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
                 <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Navigation</p>
-                <div class="flex flex-col gap-1">
-                    <button id="cam-system" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Système Solaire</button>
-                    <button id="cam-orion" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all italic">Suivi Vaisseau Orion</button>
-                    <button id="cam-hublot" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Vue Hublot (POV)</button>
-                    <button id="cam-moon" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-left border border-white/5 transition-all">Observation Lunaire</button>
+                <div class="flex flex-col gap-1 text-left">
+                    <button id="cam-system" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Système Solaire</button>
+                    <button id="cam-orion" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all italic">Suivi Vaisseau Orion</button>
+                    <button id="cam-hublot" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Vue Hublot (POV)</button>
+                    <button id="cam-moon" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Observation Lunaire</button>
                 </div>
             </div>
 
@@ -63,29 +63,30 @@
                 <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Équipage (Bio-Data)</p>
                 <div class="space-y-2 text-left">
                     <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400">PULSATIONS</span>
-                        <span id="bio-heart" class="text-[10px] font-mono text-red-400">72 BPM</span>
+                        <span class="text-[8px] text-gray-400 uppercase">Pulsations</span>
+                        <span id="bio-heart" class="text-[10px] font-mono text-red-400 uppercase">72 BPM</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400">OXYGÈNE</span>
-                        <span id="bio-o2" class="text-[10px] font-mono text-blue-400">98%</span>
+                        <span class="text-[8px] text-gray-400 uppercase">Oxygène</span>
+                        <span id="bio-o2" class="text-[10px] font-mono text-blue-400 uppercase">98%</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400">RADIATIONS</span>
-                        <span id="bio-rad" class="text-[10px] font-mono text-yellow-500">0.05 mSv/h</span>
+                        <span class="text-[8px] text-gray-400 uppercase">Radiations</span>
+                        <span id="bio-rad" class="text-[10px] font-mono text-yellow-500 uppercase">0.05 mSv/h</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
                 <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Options de Vue</p>
-                <div class="grid grid-cols-2 gap-1">
-                    <button id="toggle-stars" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Étoiles: ON</button>
-                    <button id="toggle-grid" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Grille: ON</button>
-                    <button id="toggle-van-allen" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Belts: ON</button>
-                    <button id="toggle-orbit" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left">Orbite: ON</button>
-                    <button id="toggle-forces" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all text-left col-span-2">Forces Gravitationnelles: OFF</button>
-                    <button id="snap-btn" class="text-[8px] py-1.5 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded border border-blue-500/30 transition-all text-left col-span-2">📸 Prendre une Photo</button>
+                <div class="grid grid-cols-2 gap-1 text-left">
+                    <button id="toggle-stars" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Étoiles: ON</button>
+                    <button id="toggle-grid" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Grille: OFF</button>
+                    <button id="toggle-van-allen" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Belts: OFF</button>
+                    <button id="toggle-orbit" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Orbite: ON</button>
+                    <button id="toggle-video" class="text-[8px] py-1.5 px-2 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded border border-green-500/30 transition-all">📺 Vidéo: ON</button>
+                    <button id="toggle-forces" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all col-span-2">Forces Gravitationnelles: OFF</button>
+                    <button id="snap-btn" class="text-[8px] py-1.5 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded border border-blue-500/30 transition-all col-span-2">📸 Prendre une Photo</button>
                     <div class="col-span-2 flex flex-col gap-1 bg-purple-600/10 p-1.5 rounded border border-purple-500/20">
                         <div class="flex justify-between items-center">
                             <button id="toggle-audio" class="text-[8px] text-purple-300 hover:text-purple-100 transition-all">🎵 Audio: ON</button>
@@ -144,6 +145,33 @@
             <h3 id="modal-title" class="text-xl font-bold mb-2">Cratère Shackleton</h3>
             <p id="modal-desc" class="text-sm text-gray-300 mb-4">Le Pôle Sud lunaire contient de la glace d'eau dans ses cratères éternellement ombragés, une ressource vitale pour les futures bases Artemis.</p>
             <button id="close-modal" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-bold transition-colors">FERMER</button>
+        </div>
+    </div>
+
+    <!-- Video Panel (Floating/Hidden on side) -->
+    <div id="video-panel" class="fixed top-[65%] -translate-y-1/2 left-4 w-full max-w-sm aspect-video bg-black/90 border border-white/20 rounded-2xl overflow-hidden z-40 pointer-events-auto shadow-2xl transition-all duration-500 group">
+        <!-- Tab for pulling it back -->
+        <button id="video-pull-tab" class="absolute right-0 top-0 bottom-0 w-8 bg-blue-600/20 hover:bg-blue-600/40 items-center justify-center flex hidden border-l border-white/10">
+            <span class="-rotate-90 text-[10px] font-bold tracking-tighter uppercase whitespace-nowrap">Ouvrir Video</span>
+        </button>
+
+        <div class="absolute top-0 left-0 right-0 h-8 bg-white/5 backdrop-blur-md flex items-center justify-between px-4 border-b border-white/10">
+            <div class="flex gap-2">
+                <button id="hide-video" class="text-white/50 hover:text-white transition-colors text-[10px]" title="Masquer sur le côté">◄</button>
+            </div>
+            <span class="text-[8px] font-bold tracking-widest uppercase opacity-70">SLS / Orion Mission Control</span>
+        </div>
+        <div class="w-full h-full pt-8">
+            <iframe 
+                id="yt-player"
+                class="w-full h-full"
+                src="https://www.youtube.com/embed/D5mjObehN8o?enablejsapi=1&autoplay=1&mute=0" 
+                title="YouTube video player" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                referrerpolicy="strict-origin-when-cross-origin" 
+                allowfullscreen>
+            </iframe>
         </div>
     </div>
     <script type="module" src="/main.js"></script>

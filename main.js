@@ -122,6 +122,7 @@ const toggleStarsBtn = document.getElementById('toggle-stars');
 const toggleGridBtn = document.getElementById('toggle-grid');
 const toggleVanAllenBtn = document.getElementById('toggle-van-allen');
 const toggleOrbitBtn = document.getElementById('toggle-orbit');
+const toggleVideoBtn = document.getElementById('toggle-video');
 const toggleAudioBtn = document.getElementById('toggle-audio');
 const volumeSlider = document.getElementById('volume-slider');
 const volValue = document.getElementById('vol-value');
@@ -129,11 +130,65 @@ const volValue = document.getElementById('vol-value');
 // Désactiver la grille visuellement dans l'UI par défaut
 toggleGridBtn.innerText = 'Grille: OFF';
 toggleVanAllenBtn.innerText = 'Belts: OFF';
+toggleVideoBtn.innerText = '📺 Vidéo: ON';
 
 const modal = document.getElementById('hotspot-modal');
 const modalTitle = document.getElementById('modal-title');
 const modalDesc = document.getElementById('modal-desc');
 const closeModal = document.getElementById('close-modal');
+const videoPanel = document.getElementById('video-panel');
+const hideVideoBtn = document.getElementById('hide-video');
+const pullTab = document.getElementById('video-pull-tab');
+const ytPlayer = document.getElementById('yt-player');
+
+let isVideoHidden = false;
+let isVideoEnabled = true; // Activé par défaut
+
+const updateVideoState = () => {
+    if (isVideoEnabled) {
+        videoPanel.classList.remove('hidden');
+        toggleVideoBtn.innerText = '📺 Vidéo: ON';
+        toggleVideoBtn.classList.add('bg-green-600/20', 'text-green-300', 'border-green-500/30');
+        toggleVideoBtn.classList.remove('bg-red-600/20', 'text-red-300', 'border-red-500/30');
+    } else {
+        videoPanel.classList.add('hidden');
+        toggleVideoBtn.innerText = '📺 Vidéo: OFF';
+        toggleVideoBtn.classList.remove('bg-green-600/20', 'text-green-300', 'border-green-500/30');
+        toggleVideoBtn.classList.add('bg-red-600/20', 'text-red-300', 'border-red-500/30');
+        // On arrête la vidéo en rechargeant l'iframe
+        const currentSrc = ytPlayer.src;
+        ytPlayer.src = '';
+        ytPlayer.src = currentSrc;
+    }
+};
+
+// Video Panel Toggle
+toggleVideoBtn.addEventListener('click', () => {
+    isVideoEnabled = !isVideoEnabled;
+    updateVideoState();
+    sceneManager.playBip();
+});
+
+hideVideoBtn.addEventListener('click', () => {
+    isVideoHidden = true;
+    videoPanel.style.transform = 'translateY(-50%) translateX(calc(-100% + 32px))';
+    pullTab.classList.remove('hidden');
+    pullTab.classList.add('flex');
+    hideVideoBtn.classList.add('hidden');
+    sceneManager.playBip();
+});
+
+pullTab.addEventListener('click', () => {
+    isVideoHidden = false;
+    videoPanel.style.transform = 'translateY(-50%) translateX(0)';
+    pullTab.classList.add('hidden');
+    pullTab.classList.remove('flex');
+    hideVideoBtn.classList.remove('hidden');
+    sceneManager.playBip();
+});
+
+// Initialiser l'état au démarrage
+updateVideoState();
 
 // Camera UI
 const camSystem = document.getElementById('cam-system');
