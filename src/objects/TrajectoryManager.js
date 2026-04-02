@@ -37,7 +37,8 @@ export class TrajectoryManager {
         const moonSide = new THREE.Vector3(-moonDir.z, 0, moonDir.x); // Tangente à l'orbite
 
         const points = [
-            new THREE.Vector3(5.1, 0, 0),           // 0.0 Décollage (proche Terre)
+            new THREE.Vector3(5.0, 0, 0),           // 0.0 Décollage (proche Terre)
+            new THREE.Vector3(6, 0.5, 0.5),         // Ascension
             new THREE.Vector3(10, 2, 5),            // 0.05 Orbite de parking
             new THREE.Vector3(30, 5, 15),           // 0.12 Injection Trans-Lunaire (TLI)
             
@@ -53,15 +54,18 @@ export class TrajectoryManager {
             
             new THREE.Vector3(30, -5, -15),         // Mi-chemin retour
             new THREE.Vector3(8, 0, 2),             // 0.92 Réentrée atmosphérique
-            new THREE.Vector3(5.1, 0, 0)            // 1.0 Splashdown
+            new THREE.Vector3(6, -0.5, 0.5),        // Approche finale
+            new THREE.Vector3(5.0, 0, 0)            // 1.0 Splashdown
         ];
 
-        this.curve = new THREE.CatmullRomCurve3(points, false);
+        this.curve = new THREE.CatmullRomCurve3(points, false, 'chordal');
+        this.curve.arcLengthDivisions = 1000;
         
         if (this.line) {
-            const newPoints = this.curve.getPoints(300);
+            const newPoints = this.curve.getSpacedPoints(1000);
             this.line.geometry.setFromPoints(newPoints);
             this.line.computeLineDistances();
+            this.line.geometry.computeBoundingSphere();
         }
 
         // Mettre à jour les sphères de milestones
@@ -77,19 +81,19 @@ export class TrajectoryManager {
 
     createCurve() {
         // Redondant car updateCurve est appelé, mais gardé pour la compatibilité initiale si besoin
-        this.updateCurve(false);
+        this.updateCurve();
         return this.curve;
     }
 
     drawTrajectory(scene) {
-        const points = this.curve.getPoints(200);
+        const points = this.curve.getSpacedPoints(1000);
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         
         const material = new THREE.LineDashedMaterial({
             color: 0xffffff,
             dashSize: 2,
             gapSize: 1,
-            opacity: 0.2,
+            opacity: 0.4,
             transparent: true
         });
 
