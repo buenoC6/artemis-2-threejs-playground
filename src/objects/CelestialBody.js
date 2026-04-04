@@ -4,10 +4,10 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 export class CelestialBody {
     static CONSTANTS = {
         EARTH_RADIUS: 5,
-        MOON_RADIUS: 5 * 0.27,
-        SUN_RADIUS: 5 * 20, // 109 réel mais réduit pour visibilité
-        EARTH_MOON_DIST: 5 * 60, // ~300 unités
-        EARTH_SUN_DIST: 5 * 1000, // ~5000 unités (réel 23000 mais réduit pour visibilité/performance)
+        MOON_RADIUS: 5 * 0.2727, // 27.27% (r=1737km vs 6371km)
+        SUN_RADIUS: 5 * 20, // (109 réel) réduit pour visibilité
+        EARTH_MOON_DIST: 5 * 60.33, // ~60.33 rayons terrestres (384 400 km)
+        EARTH_SUN_DIST: 5 * 1000, // (23481 réel) réduit pour visibilité
     };
 
     constructor(radius, texturePath, name) {
@@ -177,27 +177,39 @@ export class CelestialBody {
     }
 
     createOrbitLine() {
-        // Crée un cercle représentant l'orbite de la Lune
-        // On utilise un rayon de 1 et on scale ensuite pour éviter les problèmes de géométrie fixe
-        const geometry = new THREE.RingGeometry(0.995, 1.005, 128);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0x66aaff, 
-            side: THREE.DoubleSide, 
-            transparent: true, 
-            opacity: 0.4 
+        // Crée un tore (tube 3D fin) représentant l'orbite de la Lune
+        // On utilise un rayon de 1 et on scale uniformément par la suite
+        const geometry = new THREE.TorusGeometry(1, 0.0004, 8, 128); // Tube beaucoup plus fin
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x66aaff,
+            emissive: 0x66aaff,
+            emissiveIntensity: 0.4,
+            transparent: true,
+            opacity: 0.5
         });
         const orbitLine = new THREE.Mesh(geometry, material);
         orbitLine.rotation.x = Math.PI / 2;
+
+        // --- NOUVEAU : Fallback 2D line (empêche la ligne de disparaître de très loin) ---
+        const pts = [];
+        for (let i = 0; i <= 128; i++) {
+            const a = (i / 128) * Math.PI * 2;
+            pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0));
+        }
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x66aaff, transparent: true, opacity: 0.5 });
+        orbitLine.add(new THREE.Line(lineGeo, lineMat));
+
         this.orbitLine = orbitLine;
         return orbitLine;
     }
 
     updateOrbitLine(earthMesh) {
         if (this.orbitLine) {
-            // Appliquer la distance actuelle via le scale
+            // Appliquer la distance actuelle via le scale de façon uniforme (x,y,z) pour ne pas aplatir le tube
             const s = this.currentDist;
-            this.orbitLine.scale.set(s, s, 1);
-            
+            this.orbitLine.scale.set(s, s, s);
+
             // Suivre la Terre
             if (earthMesh) {
                 this.orbitLine.position.copy(earthMesh.position);
@@ -208,16 +220,29 @@ export class CelestialBody {
     createEarthOrbitLine() {
         // Orbite de la Terre autour du Soleil
         const dist = CelestialBody.CONSTANTS.EARTH_SUN_DIST;
-        const geometry = new THREE.RingGeometry(dist - 2, dist + 2, 256);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0xffffaa, 
-            side: THREE.DoubleSide, 
-            transparent: true, 
-            opacity: 0.15 
+        // Torus rayon dist, tube très fin pour l'échelle
+        const geometry = new THREE.TorusGeometry(dist, 0.4, 8, 256);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffaa,
+            emissive: 0xffff88,
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.25
         });
         const orbitLine = new THREE.Mesh(geometry, material);
         orbitLine.rotation.x = Math.PI / 2;
         orbitLine.visible = true;
+
+        // --- NOUVEAU : Fallback 2D line (empêche la ligne de disparaître de très loin) ---
+        const pts = [];
+        for (let i = 0; i <= 256; i++) {
+            const a = (i / 256) * Math.PI * 2;
+            pts.push(new THREE.Vector3(Math.cos(a) * dist, Math.sin(a) * dist, 0));
+        }
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.25 });
+        orbitLine.add(new THREE.Line(lineGeo, lineMat));
+
         return orbitLine;
     }
 
@@ -229,10 +254,10 @@ export class CelestialBody {
             // On ajoute un petit offset à l'angle pour que la Lune soit alignée avec la trajectoire au Flyby (t=0.5)
             // L'offset dépend de la construction de la trajectoire dans TrajectoryManager
             const angle = percent * orbitPercentOfCircle * Math.PI * 2;
-            
+
             this.mesh.position.x = earthMesh.position.x + Math.cos(angle) * this.currentDist;
             this.mesh.position.z = earthMesh.position.z + Math.sin(angle) * this.currentDist;
-            
+
             this.mesh.lookAt(earthMesh.position);
         } else if (this.name === 'Earth') {
             // Orbite terrestre autour du Soleil (fixe à 0,0,0)

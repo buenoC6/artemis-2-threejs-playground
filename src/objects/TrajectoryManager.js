@@ -141,10 +141,17 @@ export class TrajectoryManager {
         this.curve.arcLengthDivisions = 1000;
 
         if (this.line) {
-            const newPoints = this.curve.getSpacedPoints(1000);
-            this.line.geometry.setFromPoints(newPoints);
-            this.line.computeLineDistances();
-            this.line.geometry.computeBoundingSphere();
+            this.line.geometry.dispose();
+            // TubeGeometry(curve, tubularSegments, radius, radialSegments, closed)
+            this.line.geometry = new THREE.TubeGeometry(this.curve, 1500, 0.08, 8, false);
+
+            // Mise à jour de la ligne 2D de secours (fallback)
+            const fallbackLine = this.line.children.find(c => c.isLine);
+            if (fallbackLine) {
+                fallbackLine.geometry.dispose();
+                fallbackLine.geometry = new THREE.BufferGeometry().setFromPoints(this.curve.getSpacedPoints(1500));
+                fallbackLine.computeLineDistances();
+            }
         }
 
         // Mettre à jour les sphères de milestones
@@ -165,19 +172,52 @@ export class TrajectoryManager {
     }
 
     drawTrajectory(scene) {
-        const points = this.curve.getSpacedPoints(1000);
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        
-        const material = new THREE.LineDashedMaterial({
+        // Création dynamique d'une texture pour simuler des tirets (dash) sur le tube 3D
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 16;
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, 32, 16);
+        context.fillStyle = 'rgba(0,0,0,0)';
+        context.clearRect(32, 0, 32, 16); // Partie transparente
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(100, 1); // Répétition tout au long du tube
+
+        // Remplacement de la ligne 2D par un tube 3D très fin et esthétique
+        const geometry = new THREE.TubeGeometry(this.curve, 1500, 0.08, 8, false);
+
+        const material = new THREE.MeshStandardMaterial({
             color: 0xffffff,
-            dashSize: 2,
-            gapSize: 1,
-            opacity: 0.4,
-            transparent: true
+            emissive: 0xdddddd,
+            emissiveIntensity: 0.6,
+            transparent: true,
+            opacity: 0.8,
+            roughness: 0.4,
+            metalness: 0.5,
+            alphaMap: texture,
+            alphaTest: 0.5
         });
 
-        this.line = new THREE.Line(geometry, material);
-        this.line.computeLineDistances(); 
+        this.line = new THREE.Mesh(geometry, material);
+
+        // --- NOUVEAU : Ligne 2D de secours (Fallback) ---
+        // Une géométrie 3D trop fine disparaît de l'écran avec un zoom arrière extrême.
+        // Array.Line garantit une épaisseur d'au moins 1 pixel à n'importe quelle distance.
+        const fallbackGeo = new THREE.BufferGeometry().setFromPoints(this.curve.getSpacedPoints(1500));
+        const fallbackMat = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 2,
+            gapSize: 2,
+            transparent: true,
+            opacity: 0.5
+        });
+        const fallbackLine = new THREE.Line(fallbackGeo, fallbackMat);
+        fallbackLine.computeLineDistances();
+        this.line.add(fallbackLine); // Rattaché au tube
+
         scene.add(this.line);
 
         // Ajouter les sphères pour les milestones
