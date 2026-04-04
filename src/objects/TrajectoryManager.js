@@ -9,10 +9,10 @@ export class TrajectoryManager {
             { t: 0.0, name: 'Décollage', desc: 'Lancement du SLS depuis le Kennedy Space Center.' },
             { t: 0.07, name: 'Apogée HEO', desc: 'Point culminant de l\'orbite elliptique haute. Tests systèmes du vaisseau Orion.' },
             { t: 0.12, name: 'Injection Trans-Lunaire', desc: 'Burn TLI au point de périgée. Voyage de ~4 jours vers la Lune.' },
-            { t: 0.50, name: 'Survol Lunaire (Flyby)', desc: 'Passage à ~4700 miles derrière la face cachée. Vue de la Terre et de la Lune.' },
+            { t: 0.50, name: 'Survol Lunaire (Flyby)', desc: 'Passage à ~7 500 km derrière la face cachée. Vue de la Terre et de la Lune.' },
             { t: 0.94, name: 'Séparation CM/SM', desc: 'Le Crew Module se sépare du Service Module (CM/SM Separation) avant la rentrée.' },
-            { t: 0.97, name: 'Entry Interface', desc: 'Rentrée atmosphérique à environ 25 000 mph (40 000 km/h).' },
-            { t: 1.0, name: 'Amérissage', desc: 'Déploiement des 11 parachutes et splashdown dans l\'Océan Pacifique à ~20 mph.' }
+            { t: 0.97, name: 'Entry Interface', desc: 'Rentrée atmosphérique à environ 40 000 km/h.' },
+            { t: 1.0, name: 'Amérissage', desc: 'Déploiement des 11 parachutes et splashdown dans l\'Océan Pacifique à ~32 km/h.' }
         ];
 
         this.updateCurve(100);
@@ -88,7 +88,7 @@ export class TrajectoryManager {
                 .setY(3.0),
 
             // ═══ PHASE 5 : SURVOL LUNAIRE (FLYBY) ═══
-            // Survol lointain à environ ~4700 miles derrière la face cachée (donc plus loin de la surface lunaire).
+            // Survol lointain à environ ~7 500 km derrière la face cachée (donc plus loin de la surface lunaire).
             // La lune est à 'moonAtFlyby', et a un rayon de ~1.35 unités dans la scène.
             // On s'éloigne notablement du côté opposé à la Terre (prolongation sur l'axe moonDir).
 
@@ -98,7 +98,7 @@ export class TrajectoryManager {
                 .add(moonDir.clone().multiplyScalar(-5))
                 .setY(1.0),
 
-            // 2. Point le plus lointain ("4700 miles beyond the far side")
+            // 2. Point le plus lointain (~7 500 km beyond the far side)
             // On le place largement derrière la lune par rapport à la Terre
             moonAtFlyby.clone()
                 .add(moonDir.clone().multiplyScalar(22))
@@ -143,7 +143,7 @@ export class TrajectoryManager {
         if (this.line) {
             this.line.geometry.dispose();
             // TubeGeometry(curve, tubularSegments, radius, radialSegments, closed)
-            this.line.geometry = new THREE.TubeGeometry(this.curve, 1500, 0.08, 8, false);
+            this.line.geometry = new THREE.TubeGeometry(this.curve, 1500, 0.005, 6, false);
 
             // Mise à jour de la ligne 2D de secours (fallback)
             const fallbackLine = this.line.children.find(c => c.isLine);
@@ -172,65 +172,40 @@ export class TrajectoryManager {
     }
 
     drawTrajectory(scene) {
-        // Création dynamique d'une texture pour simuler des tirets (dash) sur le tube 3D
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 16;
-        const context = canvas.getContext('2d');
-        context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, 32, 16);
-        context.fillStyle = 'rgba(0,0,0,0)';
-        context.clearRect(32, 0, 32, 16); // Partie transparente
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(100, 1); // Répétition tout au long du tube
+        // Tube 3D fin et discret
+        const geometry = new THREE.TubeGeometry(this.curve, 1500, 0.005, 6, false);
 
-        // Remplacement de la ligne 2D par un tube 3D très fin et esthétique
-        const geometry = new THREE.TubeGeometry(this.curve, 1500, 0.08, 8, false);
-
-        const material = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0xdddddd,
-            emissiveIntensity: 0.6,
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xaabbcc,
             transparent: true,
-            opacity: 0.8,
-            roughness: 0.4,
-            metalness: 0.5,
-            alphaMap: texture,
-            alphaTest: 0.5
+            opacity: 0.35,
         });
 
         this.line = new THREE.Mesh(geometry, material);
 
-        // --- NOUVEAU : Ligne 2D de secours (Fallback) ---
-        // Une géométrie 3D trop fine disparaît de l'écran avec un zoom arrière extrême.
-        // Array.Line garantit une épaisseur d'au moins 1 pixel à n'importe quelle distance.
+        // Ligne 2D de secours (visible au zoom arrière extrême)
         const fallbackGeo = new THREE.BufferGeometry().setFromPoints(this.curve.getSpacedPoints(1500));
-        const fallbackMat = new THREE.LineDashedMaterial({
-            color: 0xffffff,
-            dashSize: 2,
-            gapSize: 2,
+        const fallbackMat = new THREE.LineBasicMaterial({
+            color: 0xaabbcc,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.25
         });
         const fallbackLine = new THREE.Line(fallbackGeo, fallbackMat);
-        fallbackLine.computeLineDistances();
-        this.line.add(fallbackLine); // Rattaché au tube
+        this.line.add(fallbackLine);
 
         scene.add(this.line);
 
         // Ajouter les sphères pour les milestones
         this.milestones.forEach(m => {
             const pos = this.curve.getPointAt(m.t);
-            const markerGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const markerGeo = new THREE.SphereGeometry(0.15, 16, 16);
             const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 });
             const marker = new THREE.Mesh(markerGeo, markerMat);
             marker.position.copy(pos);
             marker.userData.isMilestone = true;
             
             // Halo lumineux
-            const glowGeo = new THREE.SphereGeometry(1.5, 16, 16);
+            const glowGeo = new THREE.SphereGeometry(0.3, 16, 16);
             const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2 });
             const glow = new THREE.Mesh(glowGeo, glowMat);
             marker.add(glow);

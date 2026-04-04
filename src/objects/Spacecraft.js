@@ -64,6 +64,108 @@ function createHullAlphaMap() {
 
 const hullAlphaTexture = createHullAlphaMap();
 
+function createHullDiffuseMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Couleur de fond (gris métallique/argenté clair)
+    ctx.fillStyle = '#d4d8db';
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Grille de tuiles thermiques (Thermal Protection System)
+    ctx.strokeStyle = '#b0b5b9';
+    ctx.lineWidth = 1;
+    for(let y=0; y<=512; y+=16) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke();
+    }
+    for(let x=0; x<=1024; x+=16) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+    }
+
+    // Variations d'usure et de teintes des tuiles
+    for(let i=0; i<1500; i++) {
+        let tx = Math.floor(Math.random() * (1024/16)) * 16;
+        let ty = Math.floor(Math.random() * (512/16)) * 16;
+        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.04)';
+        ctx.fillRect(tx, ty, 16, 16);
+    }
+
+    // Lignes de structure majeures (Panneaux)
+    ctx.strokeStyle = '#555555';
+    ctx.lineWidth = 2;
+    for(let x=0; x<=1024; x+=128) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+    }
+    for(let y=0; y<=512; y+=64) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke();
+    }
+
+    // Trompe-l'oeil : Joints noirs peints autour des hublots
+    const drawRectBorder = (x, y, w, h, r) => {
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; // Usure / ombre externe
+        ctx.lineWidth = 12;
+        ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, r); ctx.stroke();
+
+        ctx.strokeStyle = '#222222'; // Joint noir net
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, r); ctx.stroke();
+    };
+
+    drawRectBorder(0, 110, 64, 92, 8);
+    drawRectBorder(1024, 110, 64, 92, 8);
+    drawRectBorder(128, 139, 54, 82, 6);
+    drawRectBorder(896, 139, 54, 82, 6);
+
+    // Helper texte
+    const drawText = (txt, x, y, font, align='center', color='#000000') => {
+        ctx.fillStyle = color;
+        ctx.font = font;
+        ctx.textAlign = align;
+        ctx.fillText(txt, x, y);
+    };
+
+    // Dos de la capsule (X = 512)
+    drawText('NASA', 512, 100, 'bold 44px Arial', 'center', '#e03c31');
+    drawText('UNITED STATES', 512, 140, 'bold 24px Arial', 'center', '#222222');
+
+    // Drapeau USA
+    const fx = 512 - 25, fy = 160, fw = 50, fh = 30;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(fx, fy, fw, fh);
+    ctx.fillStyle = '#b22234';
+    for(let i=0; i<13; i+=2) ctx.fillRect(fx, fy + i*(fh/13), fw, fh/13);
+    ctx.fillStyle = '#3c3b6e';
+    ctx.fillRect(fx, fy, fw * 0.45, fh * 0.54);
+
+    // Flancs de la capsule
+    drawText('ARTEMIS II', 256, 120, 'bold 20px Arial', 'center', '#111111');
+    drawText('ARTEMIS II', 768, 120, 'bold 20px Arial', 'center', '#111111');
+    drawText('ORION', 256, 150, 'bold 24px "Arial Black"', 'center', '#222222');
+    drawText('ORION', 768, 150, 'bold 24px "Arial Black"', 'center', '#222222');
+
+    // Avertissements
+    const drawWarning = (x, y) => {
+        ctx.fillStyle = '#dca000';
+        ctx.fillRect(x-20, y-10, 40, 16);
+        drawText('CAUTION', x, y, 'bold 8px Arial', 'center', '#000000');
+    };
+    drawWarning(190, 180);
+    drawWarning(322, 180);
+    drawWarning(702, 180);
+    drawWarning(834, 180);
+
+    // Noms des astronautes près de la base
+    drawText('WISEMAN • GLOVER • KOCH • HANSEN', 512, 380, 'bold 12px Arial', 'center', '#333333');
+    drawText('SN-002-CM', 512, 480, 'bold 14px monospace', 'center', '#444444');
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 16;
+    return tex;
+}
+
+const hullDiffuseTexture = createHullDiffuseMap();
+
 export class Spacecraft {
     constructor(name = 'Orion') {
         this.name = name;
@@ -83,50 +185,44 @@ export class Spacecraft {
 
         // --- MATÉRIAUX PBR PHYSIQUES AVANCÉS ---
 
-        // CM : Effet métallique avec un vernis de protection
+        // CM : Effet métallique avec un vernis de protection (et texture détaillée)
         const cmMat = new THREE.MeshPhysicalMaterial({
-            color: 0xdddddd,
-            metalness: 0.4,
-            roughness: 0.6,
-            clearcoat: 0.5,
-            clearcoatRoughness: 0.1,
-            transparent: true,           // Rendu de trou possible
-            alphaMap: hullAlphaTexture,  // Applique les trois trous
-            alphaTest: 0.5,              // Stencil net plutôt qu'une transparence fantôme
-            side: THREE.DoubleSide       // Pour ne pas voir le vide noir depuis le hublot
+            color: 0xffffff,
+            map: hullDiffuseTexture,
+            metalness: 0.0,
+            roughness: 1.0,
+            transparent: true,
+            alphaMap: hullAlphaTexture,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide
         });
 
         // Bouclier Avcoat
         const heatShieldMat = new THREE.MeshStandardMaterial({
             color: 0x110d0a,
             metalness: 0.0,
-            roughness: 0.95
+            roughness: 1.0
         });
 
         // ESM
         const smMat = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
-            metalness: 0.3,
-            roughness: 0.4,
-            clearcoat: 0.2
+            metalness: 0.0,
+            roughness: 1.0,
         });
 
         // MLI
         const mliMat = new THREE.MeshPhysicalMaterial({
             color: 0xeaeaea,
-            metalness: 0.8,
-            roughness: 0.5,
-            clearcoat: 0.2,
-            clearcoatRoughness: 0.4
+            metalness: 0.0,
+            roughness: 1.0,
         });
 
         // Panneaux
         const solarMat = new THREE.MeshPhysicalMaterial({
             color: 0x050b14,
-            metalness: 0.9,
-            roughness: 0.2,
-            iridescence: 1.0,
-            iridescenceIOR: 1.4,
+            metalness: 0.0,
+            roughness: 1.0,
             bumpMap: solarBumpTexture,
             bumpScale: 0.002,
             side: THREE.DoubleSide
@@ -134,9 +230,8 @@ export class Spacecraft {
 
         const engineMetal = new THREE.MeshPhysicalMaterial({
             color: 0xffffff,
-            metalness: 0.2,
-            roughness: 0.5,
-            clearcoat: 0.3,
+            metalness: 0.0,
+            roughness: 1.0,
             side: THREE.DoubleSide
         });
 
@@ -153,10 +248,8 @@ export class Spacecraft {
         // Caps solides séparés (sans alpha map = pas de trous parasites)
         const cmCapMat = new THREE.MeshPhysicalMaterial({
             color: 0xdddddd,
-            metalness: 0.4,
-            roughness: 0.6,
-            clearcoat: 0.5,
-            clearcoatRoughness: 0.1,
+            metalness: 0.0,
+            roughness: 1.0,
             side: THREE.DoubleSide
         });
         const topCapGeo = new THREE.CircleGeometry(0.18, 64);
@@ -179,10 +272,8 @@ export class Spacecraft {
         const dockGeo = new THREE.CylinderGeometry(0.08, 0.15, 0.12, 32);
         const dockMat = new THREE.MeshPhysicalMaterial({
             color: 0xdddddd,
-            metalness: 0.4,
-            roughness: 0.6,
-            clearcoat: 0.5,
-            clearcoatRoughness: 0.1,
+            metalness: 0.0,
+            roughness: 1.0,
             side: THREE.DoubleSide
         });
         const dock = new THREE.Mesh(dockGeo, dockMat);
@@ -202,7 +293,7 @@ export class Spacecraft {
 
         // Sièges des astronautes (4 sièges vides, disposition sobre/sombre)
         const seatGeo = new THREE.BoxGeometry(0.07, 0.03, 0.12);
-        const seatMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.2, roughness: 0.8, side: THREE.DoubleSide });
+        const seatMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.0, roughness: 0.9, side: THREE.DoubleSide });
         const seatPositions = [
             { x:  0.08, z:  0.08 }, // Avant droit
             { x: -0.08, z:  0.08 }, // Avant gauche
@@ -225,7 +316,7 @@ export class Spacecraft {
         interiorGroup.add(floor);
 
         // Lumière locale pour éclairer cet intérieur à travers la vitre !
-        const intLight = new THREE.PointLight(0xffeedd, 1.0, 0.8);
+        const intLight = new THREE.PointLight(0xffeedd, 0.3, 0.5);
         intLight.position.set(0, 0.0, 0.1);
         interiorGroup.add(intLight);
 
@@ -249,59 +340,35 @@ export class Spacecraft {
 
         const windowMat = new THREE.MeshPhysicalMaterial({
             color: 0x223344,
-            metalness: 0.8,
-            roughness: 0.05,
-            clearcoat: 1.0,
+            metalness: 0.0,
+            roughness: 1.0,
             transparent: true,
             opacity: 0.4,
             side: THREE.DoubleSide
         });
 
-        const frameMat = new THREE.MeshStandardMaterial({
-            color: 0x050505, // Encadrement noir profond
-            metalness: 0.8,
-            roughness: 0.3
-        });
-
         const buildWindow = (w, h) => {
-            const group = new THREE.Group();
             const r = Math.min(w, h) * 0.18; // Coins légèrement arrondis
-            const t = 0.012; // Épaisseur de l'encadrement
-
-            // Vitre
             const glassShape = makeRoundedRect(THREE.Shape, w, h, r);
             const glass = new THREE.Mesh(new THREE.ShapeGeometry(glassShape), windowMat);
-            group.add(glass);
-
-            // Encadrement noir extrudé (rectangle creux)
-            const outerShape = makeRoundedRect(THREE.Shape, w + t * 2, h + t * 2, r + t);
-            const hole = makeRoundedRect(THREE.Path, w, h, r);
-            outerShape.holes.push(hole);
-
-            const frameGeo = new THREE.ExtrudeGeometry(outerShape, {
-                depth: 0.01,
-                bevelEnabled: false
-            });
-            const frame = new THREE.Mesh(frameGeo, frameMat);
-            frame.position.z = -0.004;
-            group.add(frame);
-
-            return group;
+            return glass;
         };
 
         // Fenêtre frontale (légèrement plus large, fidèle à Orion)
-        const windowFront = buildWindow(0.07, 0.055);
-        windowFront.position.set(0, 0.1, 0.24);
-        windowFront.rotation.x = -Math.PI / 6;
+        const windowFront = buildWindow(0.071, 0.038);
+        windowFront.position.set(0, 0.1, 0.250); // Z=0.250 (pour éviter le z-fighting avec la surface)
+        windowFront.rotation.x = -0.741; // Angle de la pente du cône d'Orion
         cm.add(windowFront);
 
         // Fenêtres latérales
         for (let i = 0; i < 2; i++) {
-            const sideWindow = buildWindow(0.06, 0.05);
+            const sideWindow = buildWindow(0.061, 0.031);
             const sideAngle = (i === 0 ? 1 : -1) * Math.PI / 4;
-            sideWindow.position.set(Math.sin(sideAngle) * 0.28, 0.08, 0.18);
+            // Radius ~0.267, à 45 deg, X et Z valent ~0.1887. + offset minime pour Z-fighting.
+            sideWindow.position.set(Math.sin(sideAngle) * 0.190, 0.08, 0.190);
+            sideWindow.rotation.order = 'YXZ'; // Important pour pivoter correctement sur la surface conique
             sideWindow.rotation.y = sideAngle;
-            sideWindow.rotation.x = -Math.PI / 6;
+            sideWindow.rotation.x = -0.741;
             cm.add(sideWindow);
         }
 
@@ -312,21 +379,10 @@ export class Spacecraft {
 
         // --- TRANSITION CM/ESM: Architecture de découplage fidèle Artemis/Orion ---
 
-        // 1. Anneau de séparation pyrotechnique (Frangible Joint)
-        // Joint frangible avec boulons explosifs FCDC permettant le découplage CM/SM
-        const sepRingGeo = new THREE.TorusGeometry(0.46, 0.014, 12, 64);
-        const sepRingMat = new THREE.MeshStandardMaterial({
-            color: 0x2a2a2a, metalness: 0.95, roughness: 0.2
-        });
-        const sepRing = new THREE.Mesh(sepRingGeo, sepRingMat);
-        sepRing.position.z = -0.025;
-        sepRing.rotation.x = Math.PI / 2;
-        smGroup.add(sepRing);
-
         // Boulons pyrotechniques répartis sur l'anneau
         const boltGeo = new THREE.SphereGeometry(0.007, 8, 6);
         const boltMat = new THREE.MeshStandardMaterial({
-            color: 0x999999, metalness: 0.9, roughness: 0.15
+            color: 0x999999, metalness: 0.0, roughness: 1.0
         });
         for (let i = 0; i < 16; i++) {
             const bolt = new THREE.Mesh(boltGeo, boltMat);
@@ -342,10 +398,9 @@ export class Spacecraft {
         const cmaCenter = -0.075;
         const numCmaPanels = 3;
         const cmaPanelMat = new THREE.MeshPhysicalMaterial({
-            color: 0xf0ece0, // Blanc cassé caractéristique des fairings Orion
-            metalness: 0.1,
-            roughness: 0.7,
-            clearcoat: 0.05,
+            color: 0xf0ece0,
+            metalness: 0.0,
+            roughness: 1.0,
             side: THREE.DoubleSide
         });
 
@@ -365,7 +420,7 @@ export class Spacecraft {
 
         // Longerons structurels (raidisseurs) dans les gaps entre panneaux
         const longeronMat = new THREE.MeshStandardMaterial({
-            color: 0x555555, metalness: 0.85, roughness: 0.3
+            color: 0x555555, metalness: 0.0, roughness: 1.0
         });
         for (let i = 0; i < numCmaPanels; i++) {
             const lAngle = (i * Math.PI * 2) / numCmaPanels;
@@ -379,7 +434,7 @@ export class Spacecraft {
         // 3. Ressorts de poussée (Push-off springs) pour la séparation
         const springGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.03, 6);
         const springMat = new THREE.MeshStandardMaterial({
-            color: 0xbbaa00, metalness: 0.75, roughness: 0.4
+            color: 0xbbaa00, metalness: 0.0, roughness: 1.0
         });
         for (let i = 0; i < 6; i++) {
             const spring = new THREE.Mesh(springGeo, springMat);
@@ -392,7 +447,7 @@ export class Spacecraft {
         // 4. Spacecraft Adapter (SA) Ring — anneau structurel de jonction CMA/ESM
         const saRingGeo = new THREE.CylinderGeometry(0.415, 0.415, 0.025, 64);
         const saRingMat = new THREE.MeshStandardMaterial({
-            color: 0x444444, metalness: 0.88, roughness: 0.2
+            color: 0x444444, metalness: 0.0, roughness: 1.0
         });
         const saRing = new THREE.Mesh(saRingGeo, saRingMat);
         saRing.position.z = -0.13;
@@ -403,7 +458,7 @@ export class Spacecraft {
         // 5. Panneau ombilical (connexions électriques + fluides CM↔ESM)
         const umbGeo = new THREE.BoxGeometry(0.015, 0.06, 0.05);
         const umbMat = new THREE.MeshStandardMaterial({
-            color: 0x777777, metalness: 0.6, roughness: 0.5
+            color: 0x777777, metalness: 0.0, roughness: 1.0
         });
         const umbPanel = new THREE.Mesh(umbGeo, umbMat);
         umbPanel.position.set(0.44, 0, cmaCenter);
@@ -412,7 +467,7 @@ export class Spacecraft {
         // Connecteurs ombilicaux dorés
         const connGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.02, 6);
         const connMat = new THREE.MeshStandardMaterial({
-            color: 0xcc8800, metalness: 0.85, roughness: 0.3
+            color: 0xcc8800, metalness: 0.0, roughness: 1.0
         });
         for (let j = -1; j <= 1; j += 2) {
             const conn = new THREE.Mesh(connGeo, connMat);
@@ -438,7 +493,7 @@ export class Spacecraft {
         const radGeo = new THREE.PlaneGeometry(0.12, 0.35);
         for(let i = 0; i < 8; i++) {
             // Radiateurs : Blancs mais très mats pour la dissipation thermique
-            const radMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.1, roughness: 0.9 });
+            const radMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.0, roughness: 1.0 });
             const rad = new THREE.Mesh(radGeo, radMat);
             const angle = (i * Math.PI) / 4;
             rad.position.set(Math.cos(angle) * 0.405, -0.025, Math.sin(angle) * 0.405);
@@ -502,7 +557,7 @@ export class Spacecraft {
             const strutGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.35, 16);
             strutGeo.rotateZ(Math.PI / 2);
             // Bras structurel plus sombre
-            const strutMat = new THREE.MeshStandardMaterial({color: 0x555555, metalness: 0.8, roughness: 0.5});
+            const strutMat = new THREE.MeshStandardMaterial({color: 0x555555, metalness: 0.0, roughness: 1.0});
             const strut = new THREE.Mesh(strutGeo, strutMat);
             strut.position.x = 0.4 + 0.175; // S'attache bord au nouveau rayon (0.4)
             solarTracker.add(strut);
@@ -553,10 +608,11 @@ export class Spacecraft {
 
         const material = new THREE.PointsMaterial({
             color: 0x00ffff,
-            size: 0.1,
+            size: 0.003,
             transparent: true,
             opacity: 0.5,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
         });
 
         const points = new THREE.Points(geometry, material);

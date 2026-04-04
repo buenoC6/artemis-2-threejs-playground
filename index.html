@@ -7,128 +7,171 @@
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-black text-white">
+
     <div id="app"></div>
-    <!-- UI Layer - Nouveau design éclaté (Outil) -->
-    <div id="ui-layer" class="fixed inset-0 p-4 pointer-events-none z-10 font-sans">
-        
-        <!-- Header: Titre et bouton LIVE -->
-        <div class="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-lg flex justify-between items-center bg-black/40 backdrop-blur-lg px-4 py-2 rounded-full border border-white/10 pointer-events-auto">
-            <h1 class="text-sm md:text-base font-bold tracking-widest uppercase italic">Artemis II <span class="text-blue-400 font-normal not-italic tracking-normal lowercase">mission viz</span></h1>
-            <button id="live-btn" class="px-4 py-1 rounded-full bg-red-600 text-[10px] font-bold animate-pulse hover:bg-red-500 transition-colors shadow-lg shadow-red-900/20">LIVE</button>
+    <!-- UI Layer - Responsive 2026 Design -->
+    <div id="ui-layer" class="fixed inset-0 pointer-events-none z-10 font-sans opacity-0 transition-opacity duration-1000">
+
+        <!-- NOUVEAU : Toggles CSS-only pour Menus Mobile -->
+        <input type="checkbox" id="mobile-tel-toggle" class="peer/tel hidden" />
+        <input type="checkbox" id="mobile-menu-toggle" class="peer/menu hidden" />
+
+        <!-- Header Controls -->
+        <div class="absolute top-2 md:top-4 left-0 w-full px-2 md:px-4 flex justify-between items-start pointer-events-none z-50">
+            <!-- Bouton Télémétrie (Mobile) -->
+            <label for="mobile-tel-toggle" class="md:hidden pointer-events-auto flex items-center justify-center p-2.5 bg-black/50 backdrop-blur-lg border border-white/10 rounded-full text-xs text-blue-400 font-bold uppercase tracking-widest cursor-pointer hover:bg-white/10 transition-colors shadow-lg active:scale-95">
+                📊 <span class="hidden sm:inline ml-2">Data</span>
+            </label>
+
+            <!-- Titre Central -->
+            <div class="pointer-events-auto flex-1 max-w-sm mx-auto flex justify-between items-center bg-black/40 backdrop-blur-lg px-4 py-2 rounded-full border border-white/10 transition-all shadow-lg">
+                <h1 class="text-xs sm:text-sm md:text-base font-bold tracking-widest uppercase italic truncate mr-2 text-white">Artemis II <span class="text-blue-400 font-normal not-italic tracking-normal lowercase hidden sm:inline">mission viz</span></h1>
+                <button id="live-btn" class="px-3 md:px-4 py-1 rounded-full bg-red-600 text-[9px] md:text-[10px] font-bold animate-pulse hover:bg-red-500 transition-colors shadow-lg shadow-red-900/20 shrink-0 text-white">LIVE</button>
+            </div>
+
+            <!-- Bouton Menu (Mobile) -->
+            <label for="mobile-menu-toggle" class="md:hidden pointer-events-auto flex items-center justify-center p-2.5 bg-black/50 backdrop-blur-lg border border-white/10 rounded-full text-xs text-blue-400 font-bold uppercase tracking-widest cursor-pointer hover:bg-white/10 transition-colors shadow-lg active:scale-95">
+                ☰ <span class="hidden sm:inline ml-2">Menu</span>
+            </label>
         </div>
 
-        <!-- Left Panel: Télémétrie -->
-        <div class="absolute top-20 left-4 w-48 space-y-2 pointer-events-auto">
-            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
-                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1">Télémétrie en temps réel</p>
-                <div class="space-y-3">
-                    <div>
-                        <p class="text-gray-500 text-[8px] uppercase">Temps Mission</p>
-                        <span id="mission-day" class="font-mono text-white text-xs block">Jour J+1</span>
+        <!-- Left Panel: Drawer Mobile / Fixed Desktop -->
+        <div id="left-drawer" class="fixed inset-y-0 left-0 w-64 max-w-[80vw] transform -translate-x-[150%] peer-checked/tel:translate-x-0 md:-translate-x-[150%] transition-transform duration-1000 ease-out z-40 bg-black/80 backdrop-blur-2xl border-r border-white/10 md:absolute md:top-20 md:left-4 md:w-52 md:bg-transparent md:backdrop-blur-none md:border-none p-4 md:p-0 pointer-events-auto overflow-y-auto no-scrollbar pt-20 md:pt-0 space-y-3 shadow-2xl md:shadow-none">
+
+            <details class="group bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 hover:bg-white/5 transition-colors overflow-hidden shadow-lg" open>
+                <summary class="text-[10px] text-blue-400 uppercase font-bold p-3 cursor-pointer list-none flex justify-between items-center tracking-tighter hover:bg-white/5 transition-colors">
+                    Télémétrie RT
+                    <span class="group-open:-rotate-180 transition-transform duration-300 text-white/50">▼</span>
+                </summary>
+                <div class="p-4 pt-0 border-t border-white/5 space-y-3">
+                    <div class="bg-black/40 p-2 rounded-lg">
+                        <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Temps Mission</p>
+                        <span id="mission-day" class="font-mono text-white text-sm block">Jour J+1</span>
                     </div>
-                    <div>
-                        <p class="text-gray-500 text-[8px] uppercase">Vitesse</p>
-                        <span id="speed-info" class="font-mono text-green-400 text-xs block">24,500 km/h</span>
+                    <div class="bg-black/40 p-2 rounded-lg">
+                        <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Vitesse</p>
+                        <span id="speed-info" class="font-mono text-green-400 text-sm block">24,500 km/h</span>
                     </div>
-                    <div>
-                        <p class="text-gray-500 text-[8px] uppercase">Température</p>
-                        <span id="temp-info" class="font-mono text-orange-400 text-xs block">-150 °C</span>
+                    <div class="bg-black/40 p-2 rounded-lg">
+                        <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Température</p>
+                        <span id="temp-info" class="font-mono text-orange-400 text-sm block">-150 °C</span>
                     </div>
-                    <div>
-                        <p class="text-gray-500 text-[8px] uppercase">Distance Terre</p>
-                        <span id="distance-info" class="font-mono text-white text-xs block">0 km</span>
+                    <div class="bg-black/40 p-2 rounded-lg">
+                        <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Dist. Terre</p>
+                        <span id="distance-info" class="font-mono text-white text-sm block">0 km</span>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div id="comms-status" class="bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 flex items-center justify-between">
-                <span class="text-[8px] text-gray-400 uppercase tracking-tighter">Signal: <span id="signal-delay" class="text-green-500 font-mono lowercase italic">0.0s</span></span>
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]"></span>
+            <div id="comms-status" class="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 flex items-center justify-between shadow-lg">
+                <span class="text-[9px] text-gray-400 uppercase tracking-tighter font-bold">Signal: <span id="signal-delay" class="text-green-500 font-mono lowercase italic ml-1">0.0s</span></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
             </div>
         </div>
 
-        <!-- Right Panel: Navigation / Caméra -->
-        <div class="absolute top-20 right-4 w-40 space-y-2 pointer-events-auto text-right">
-            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
-                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Navigation</p>
-                <div class="flex flex-col gap-1 text-left">
-                    <button id="cam-system" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Système Solaire</button>
-                    <button id="cam-orion" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all italic">Suivi Vaisseau Orion</button>
-                    <button id="cam-hublot" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Vue Hublot (POV)</button>
-                    <button id="cam-moon" class="text-[9px] py-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all">Observation Lunaire</button>
-                </div>
-            </div>
+        <!-- Right Panel: Drawer Mobile / Fixed Desktop -->
+        <div id="right-drawer" class="fixed inset-y-0 right-0 w-64 max-w-[85vw] transform translate-x-[150%] peer-checked/menu:translate-x-0 md:translate-x-[150%] transition-transform duration-1000 ease-out z-40 bg-black/80 backdrop-blur-2xl border-l border-white/10 md:absolute md:top-20 md:right-4 md:w-60 md:bg-transparent md:backdrop-blur-none md:border-none p-4 md:p-0 pointer-events-auto overflow-y-auto no-scrollbar pt-20 md:pt-0 pb-28 md:pb-0 space-y-3 md:max-h-[75vh] shadow-[0_0_50px_rgba(0,0,0,0.5)] md:shadow-none">
 
-            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
-                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Équipage (Bio-Data)</p>
-                <div class="space-y-2 text-left">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400 uppercase">Pulsations</span>
-                        <span id="bio-heart" class="text-[10px] font-mono text-red-400 uppercase">72 BPM</span>
+            <details class="group bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-lg" open>
+                <summary class="text-[10px] text-blue-400 uppercase font-bold p-3 cursor-pointer list-none flex justify-between items-center tracking-tighter hover:bg-white/5 transition-colors">
+                    Caméras
+                    <span class="group-open:-rotate-180 transition-transform duration-300 text-white/50">▼</span>
+                </summary>
+                <div class="p-2 pt-0 border-t border-white/5 flex flex-col gap-1 text-left">
+                    <button id="cam-system" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">1. Système Solaire</button>
+                    <button id="cam-orion" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all italic text-left relative overflow-hidden group/btn hover:text-blue-300"><div class="absolute inset-0 bg-blue-500/10 origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform"></div>2. Suivi Vaisseau Orion</button>
+                    <button id="cam-hublot" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">3. Vue Hublot (POV)</button>
+                    <button id="cam-moon" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">4. Observation Lunaire</button>
+                </div>
+            </details>
+
+            <details class="group bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-lg">
+                <summary class="text-[10px] text-blue-400 uppercase font-bold p-3 cursor-pointer list-none flex justify-between items-center tracking-tighter hover:bg-white/5 transition-colors">
+                    Bio-Data
+                    <span class="group-open:-rotate-180 transition-transform duration-300 text-white/50">▼</span>
+                </summary>
+                <div class="p-2 pt-0 border-t border-white/5 space-y-1.5 mt-1 text-left">
+                    <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span class="text-[9px] text-gray-300 flex items-center gap-1.5">❤️ Rythme</span>
+                        <span id="bio-heart" class="text-[10px] font-mono text-red-400 uppercase font-bold">72 BPM</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400 uppercase">Oxygène</span>
-                        <span id="bio-o2" class="text-[10px] font-mono text-blue-400 uppercase">98%</span>
+                    <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span class="text-[9px] text-gray-300 flex items-center gap-1.5">🫁 Oxygène</span>
+                        <span id="bio-o2" class="text-[10px] font-mono text-blue-400 uppercase font-bold">98%</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-[8px] text-gray-400 uppercase">Radiations</span>
-                        <span id="bio-rad" class="text-[10px] font-mono text-yellow-500 uppercase">0.05 mSv/h</span>
+                    <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                        <span class="text-[9px] text-gray-300 flex items-center gap-1.5">☢️ Radiations</span>
+                        <span id="bio-rad" class="text-[10px] font-mono text-yellow-500 uppercase font-bold">0.05 mSv</span>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
-                <p class="text-[9px] text-blue-400 uppercase font-bold mb-2 tracking-tighter border-b border-white/10 pb-1 text-left">Options de Vue</p>
-                <div class="grid grid-cols-2 gap-1 text-left">
-                    <button id="toggle-stars" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Étoiles: ON</button>
-                    <button id="toggle-grid" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Grille: OFF</button>
-                    <button id="toggle-van-allen" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Belts: OFF</button>
-                    <button id="toggle-orbit" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all">Orbite: ON</button>
-                    <button id="toggle-video" class="text-[8px] py-1.5 px-2 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded border border-green-500/30 transition-all">📺 Vidéo: ON</button>
-                    <button id="toggle-forces" class="text-[8px] py-1.5 px-2 bg-white/5 hover:bg-white/10 rounded border border-white/5 transition-all col-span-2">Forces Gravitationnelles: OFF</button>
-                    <button id="snap-btn" class="text-[8px] py-1.5 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded border border-blue-500/30 transition-all col-span-2">📸 Prendre une Photo</button>
-                    <div class="col-span-2 flex flex-col gap-1 bg-purple-600/10 p-1.5 rounded border border-purple-500/20">
-                        <div class="flex justify-between items-center">
-                            <button id="toggle-audio" class="text-[8px] text-purple-300 hover:text-purple-100 transition-all">🎵 Audio: ON</button>
-                            <span id="vol-value" class="text-[7px] text-purple-400 font-mono">30%</span>
+            <details class="group bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-lg" open>
+                <summary class="text-[10px] text-blue-400 uppercase font-bold p-3 cursor-pointer list-none flex justify-between items-center tracking-tighter hover:bg-white/5 transition-colors">
+                    Paramètres
+                    <span class="group-open:-rotate-180 transition-transform duration-300 text-white/50">▼</span>
+                </summary>
+                <div class="p-2 pt-0 border-t border-white/5 grid grid-cols-2 gap-1.5 text-left mt-1">
+                    <button id="toggle-stars" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all text-center">Étoiles: ON</button>
+                    <button id="toggle-grid" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all text-center">Grille: OFF</button>
+                    <button id="toggle-van-allen" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all text-center">Belts: OFF</button>
+                    <button id="toggle-orbit" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all text-center">Orbite: ON</button>
+                    <button id="snap-btn" class="text-[9px] py-2 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded-lg border border-blue-500/30 transition-all text-center col-span-2">📸 Photo</button>
+                    <button id="toggle-forces" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all col-span-2 text-center text-gray-300">Gravité Affichée: OFF</button>
+
+                    <div class="col-span-2 flex flex-col gap-2 bg-purple-600/10 p-3 rounded-xl border border-purple-500/20 mt-1">
+                        <div class="flex justify-between items-center text-purple-300">
+                            <button id="toggle-audio" class="text-[10px] hover:text-purple-100 transition-all font-bold">🎵 Audio: ON</button>
+                            <span id="vol-value" class="text-[9px] font-mono opacity-80">10%</span>
                         </div>
-                        <input type="range" id="volume-slider" min="0" max="100" value="30" class="w-full h-1 bg-purple-900/30 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                        <input type="range" id="volume-slider" min="0" max="100" value="10" class="w-full h-1.5 bg-purple-900/50 rounded-full appearance-none cursor-pointer accent-purple-400">
                     </div>
                 </div>
-            </div>
+            </details>
         </div>
+
+        <!-- Overlays de fermeture des tiroirs (Mobile) -> Clic à côté ferme le tiroir -->
+        <label for="mobile-tel-toggle" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 opacity-0 peer-checked/tel:opacity-100 peer-checked/tel:pointer-events-auto pointer-events-none transition-opacity duration-300 md:hidden"></label>
+        <label for="mobile-menu-toggle" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 opacity-0 peer-checked/menu:opacity-100 peer-checked/menu:pointer-events-auto pointer-events-none transition-opacity duration-300 md:hidden"></label>
 
         <!-- Bottom Center: Timeline -->
-        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 pointer-events-auto">
-            <div class="bg-black/40 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
-                <div class="relative w-full mb-1 px-1">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-[8px] text-gray-500 uppercase tracking-widest">Lancement (T+0)</span>
-                        <span class="text-[8px] text-gray-500 uppercase tracking-widest">Amérissage (T+10j)</span>
-                    </div>
+        <div class="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] max-w-2xl pointer-events-auto z-20 transition-all">
+            <!-- Panneau de Description Phase (Pédagogique) -->
+            <div id="phase-info-panel" class="absolute bottom-[110%] w-full pointer-events-none transition-opacity duration-700 opacity-0 hidden">
+                <div class="bg-black/80 backdrop-blur-xl border border-blue-500/50 p-4 rounded-xl shadow-[0_0_30px_rgba(59,130,246,0.3)] text-center w-full">
+                    <h2 id="phase-info-title" class="text-blue-400 font-bold tracking-widest uppercase text-xs md:text-sm mb-1">Titre Phase</h2>
+                    <p id="phase-info-desc" class="text-white/80 text-[10px] md:text-xs leading-relaxed">Description pédagogique de la phase.</p>
                 </div>
-                <div class="relative w-full h-6 flex items-center">
-                    <div id="timeline-markers" class="absolute inset-x-1 inset-y-0 pointer-events-none flex items-center"></div>
-                    <input type="range" id="timeline-slider" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-500 transition-all hover:h-2 z-10" min="0" max="100" value="0">
+            </div>
+
+            <div class="bg-black/60 backdrop-blur-2xl p-4 md:p-5 rounded-2xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] relative">
+                <div class="relative w-full mb-1 flex justify-between items-center px-1">
+                    <span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">T+0</span>
+                    <span class="text-[9px] font-bold text-white tracking-[0.2em] uppercase opacity-50 hidden sm:block">Progression</span>
+                    <span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">T+10j</span>
                 </div>
-                <p id="slider-hint" class="text-[8px] text-center text-gray-600 mt-2 italic tracking-tight opacity-50">Désactivation automatique du mode LIVE si manipulé</p>
+                <div class="relative w-full h-8 flex items-center">
+                    <div id="timeline-markers" class="absolute inset-x-2 inset-y-0 pointer-events-none flex items-center z-0"></div>
+                    <input type="range" id="timeline-slider" class="relative w-full h-2 bg-white/20 rounded-full appearance-none cursor-pointer accent-blue-500 hover:h-3 transition-all z-10 box-border" min="0" max="100" value="0">
+                </div>
+                <p id="slider-hint" class="text-[9px] text-center text-gray-500 mt-2 italic tracking-tight font-medium">Manipulation suspend le mode LIVE</p>
             </div>
         </div>
 
         <!-- Notifications et Toast (Flottant) -->
-        <div class="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-sm">
-            <div id="milestone-toast" class="p-3 bg-blue-900/60 backdrop-blur-lg border border-blue-400/30 rounded-xl text-xs hidden shadow-[0_0_20px_rgba(59,130,246,0.2)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div class="flex items-start gap-2">
-                    <span class="text-blue-400">ℹ️</span>
-                    <div>
-                        <span class="font-bold block text-blue-200">Point de Passage :</span>
-                        <span id="milestone-text" class="text-gray-200 leading-tight">Injection Trans-Lunaire</span>
+        <div class="absolute bottom-28 md:bottom-36 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] md:w-full max-w-sm pointer-events-none z-20">
+            <div id="milestone-toast" class="p-3.5 bg-blue-900/80 backdrop-blur-xl border border-blue-400/30 rounded-2xl text-xs hidden shadow-[0_10px_30px_rgba(59,130,246,0.3)] animate-in fade-in slide-in-from-bottom-5 duration-500">
+                <div class="flex items-start gap-4">
+                    <div class="p-2 bg-blue-500/20 rounded-xl text-blue-300 text-lg">ℹ️</div>
+                    <div class="flex-1 mt-0.5">
+                        <span class="text-[9px] font-bold tracking-widest uppercase block text-blue-300 mb-0.5">Point de Passage</span>
+                        <span id="milestone-text" class="text-white leading-snug font-medium text-[13px]">Injection Trans-Lunaire</span>
                     </div>
                 </div>
             </div>
 
-            <div id="van-allen-alert" class="mt-2 p-2 bg-yellow-900/60 backdrop-blur-md border border-yellow-400/30 rounded-xl text-[9px] hidden text-yellow-100 animate-pulse text-center">
-                ☢️ TRAVERSÉE DES CEINTURES DE VAN ALLEN - BOUCLIERS ACTIFS
+            <div id="van-allen-alert" class="mt-3 p-3 bg-yellow-950/90 backdrop-blur-xl border border-yellow-500/50 rounded-xl text-[10px] hidden text-yellow-200 animate-pulse text-center font-bold tracking-[0.1em] shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+                ☢️ CEINTURES DE VAN ALLEN - BOUCLIERS ACTIFS
             </div>
         </div>
     </div>
@@ -148,32 +191,6 @@
         </div>
     </div>
 
-    <!-- Video Panel (Floating/Hidden on side) -->
-    <div id="video-panel" class="fixed top-[65%] -translate-y-1/2 left-4 w-full max-w-sm aspect-video bg-black/90 border border-white/20 rounded-2xl overflow-hidden z-40 pointer-events-auto shadow-2xl transition-all duration-500 group">
-        <!-- Tab for pulling it back -->
-        <button id="video-pull-tab" class="absolute right-0 top-0 bottom-0 w-8 bg-blue-600/20 hover:bg-blue-600/40 items-center justify-center flex hidden border-l border-white/10">
-            <span class="-rotate-90 text-[10px] font-bold tracking-tighter uppercase whitespace-nowrap">Ouvrir Video</span>
-        </button>
-
-        <div class="absolute top-0 left-0 right-0 h-8 bg-white/5 backdrop-blur-md flex items-center justify-between px-4 border-b border-white/10">
-            <div class="flex gap-2">
-                <button id="hide-video" class="text-white/50 hover:text-white transition-colors text-[10px]" title="Masquer sur le côté">◄</button>
-            </div>
-            <span class="text-[8px] font-bold tracking-widest uppercase opacity-70">SLS / Orion Mission Control</span>
-        </div>
-        <div class="w-full h-full pt-8">
-            <iframe 
-                id="yt-player"
-                class="w-full h-full"
-                src="https://www.youtube.com/embed/D5mjObehN8o?enablejsapi=1&autoplay=1&mute=0" 
-                title="YouTube video player" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                referrerpolicy="strict-origin-when-cross-origin" 
-                allowfullscreen>
-            </iframe>
-        </div>
-    </div>
     <script type="module" src="/main.js"></script>
 </body>
 </html>

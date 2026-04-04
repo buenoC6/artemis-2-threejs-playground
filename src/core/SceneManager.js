@@ -29,8 +29,10 @@ export class SceneManager {
         this.cameraTarget = null;
         this.cameraOffset = new THREE.Vector3(50, 40, 150);
         this.lookAtTarget = null;
+        this.hublotTarget = null; // Mode hublot (POV)
         this.isLerping = false;
         this.isInteracting = false;
+        this.introActive = false; // Empêche updateExposure d'écraser l'opacité des étoiles pendant l'intro
 
         this.init();
         this.initPostProcessing();
@@ -51,7 +53,7 @@ export class SceneManager {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.screenSpacePanning = false;
-        this.controls.minDistance = 2;
+        this.controls.minDistance = 0.05;
         this.controls.maxDistance = 20000;
         
         // Arrêter l'interpolation si l'utilisateur interagit, mais GARDER la cible pour le suivi
@@ -298,7 +300,24 @@ export class SceneManager {
         this.composer.addPass(outputPass);
     }
 
+    setHublotMode(target) {
+        this.hublotTarget = target;
+        this.cameraTarget = null;
+        this.lookAtTarget = null;
+        this.isLerping = false;
+        this.controls.enabled = false;
+        // Near clip très proche pour voir l'intérieur du cockpit miniature
+        this.camera.near = 0.001;
+        this.camera.updateProjectionMatrix();
+    }
+
     setCameraTarget(target, offset = new THREE.Vector3(20, 10, 20), lookAtPos = null, speed = 0.05) {
+        this.hublotTarget = null; // Quitter le mode hublot
+        // Restaurer le near clip normal
+        if (this.camera.near < 0.1) {
+            this.camera.near = 0.1;
+            this.camera.updateProjectionMatrix();
+        }
         this.cameraTarget = target;
         this.cameraOffset.copy(offset);
         this.lookAtTarget = lookAtPos;
@@ -310,6 +329,28 @@ export class SceneManager {
     }
 
     updateCamera() {
+        // ── Mode Hublot (POV) : caméra collée au cockpit ──
+        if (this.hublotTarget) {
+            const pos = new THREE.Vector3();
+            const quat = new THREE.Quaternion();
+            this.hublotTarget.getWorldPosition(pos);
+            this.hublotTarget.getWorldQuaternion(quat);
+
+            // Offset local : légèrement vers le haut et l'avant du cockpit (échelle 0.03)
+            const offset = new THREE.Vector3(0, 0.002, 0.006);
+            offset.applyQuaternion(quat);
+            this.camera.position.copy(pos).add(offset);
+
+            // Regarder loin devant dans la direction de vol
+            const forward = new THREE.Vector3(0, 0, 15);
+            forward.applyQuaternion(quat);
+            this.camera.lookAt(pos.clone().add(forward));
+
+            this.updateLabelsLOD();
+            this.updateMilestonesLOD();
+            return;
+        }
+
         const targetPos = new THREE.Vector3();
         const lookTarget = new THREE.Vector3();
 
@@ -414,17 +455,17 @@ export class SceneManager {
     addStars() {
         const starGeometry = new THREE.BufferGeometry();
         const starMaterial = new THREE.PointsMaterial({ 
-            color: 0xffffff, 
-            size: 0.1, // Très petit pour un aspect lointain et discret
-            transparent: true, 
-            opacity: 0.1 // Très transparent
+            color: 0xdddddd, // Etoiles légèrement moins brillantes de base
+            size: 0.08, // Taille réduite
+            transparent: true,
+            opacity: 0.08 // Opacité de base réduite (avant 0.1)
         });
 
         const starVertices = [];
         const starColors = [];
         const color = new THREE.Color();
 
-        for (let i = 0; i < 30000; i++) {
+        for (let i = 0; i < 8000; i++) { // Réduits (au lieu de 30000) pour accentuer l'orbite orion
             // Sphère géante pour une répartition uniforme
             const phi = Math.random() * Math.PI * 2;
             const theta = Math.acos(2 * Math.random() - 1);
@@ -461,6 +502,33 @@ export class SceneManager {
         if (this.grid) this.grid.visible = visible;
     }
 
+    updateExposure() {
+        if (this.introActive) return; // Ne pas toucher à l'opacité des étoiles pendant l'intro
+        if (!this.stars || !this.stars.material || !this.sunPos) return;
+
+        const camDir = new THREE.Vector3();
+        this.camera.getWorldDirection(camDir);
+
+        const sunDir = this.sunPos.clone().sub(this.camera.position).normalize();
+        const dot = camDir.dot(sunDir);
+
+        // Opacité normale de base des étoiles
+        let targetOpacity = 0.08;
+
+        // Simulation de l'éblouissement caméra/œil quand on regarde vers le Soleil
+        if (dot > 0.3) {
+            // Plus on regarde vers le centre du Soleil (dot = 1), plus les étoiles disparaissent
+            const glare = Math.min((dot - 0.3) / 0.7, 1.0);
+            targetOpacity = 0.08 * (1 - glare * 0.95); // Disparaissent quasi totalement
+        }
+
+        if (this.currentStarOpacity === undefined) this.currentStarOpacity = 0.08;
+
+        // Transition douce (lerp) pour simuler l'adaptation de l'iris / temps d'exposition
+        this.currentStarOpacity += (targetOpacity - this.currentStarOpacity) * 0.05;
+        this.stars.material.opacity = this.currentStarOpacity;
+    }
+
     onWindowResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
@@ -475,6 +543,7 @@ export class SceneManager {
                 this.animationId = requestAnimationFrame(loop);
                 if (this.currentCallback) this.currentCallback();
                 this.updateCamera();
+                this.updateExposure();
                 this.composer.render();
                 this.labelRenderer.render(this.scene, this.camera);
             };
