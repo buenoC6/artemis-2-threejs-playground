@@ -7,60 +7,139 @@ export class TrajectoryManager {
         this.milestoneMarkers = [];
         this.milestones = [
             { t: 0.0, name: 'Décollage', desc: 'Lancement du SLS depuis le Kennedy Space Center.' },
-            { t: 0.05, name: 'Orbite Haute (HEO)', desc: 'Tests du vaisseau Orion en orbite terrestre haute.' },
-            { t: 0.12, name: 'Injection Trans-Lunaire', desc: 'Le moteur ICPS propulse Orion vers la Lune.' },
-            { t: 0.5, name: 'Survol Lunaire (Flyby)', desc: 'Passage au plus proche de la face cachée (LOS).' },
-            { t: 0.92, name: 'Réentrée atmosphérique', desc: 'Séparation du module de service et rentrée à 40 000 km/h.' },
-            { t: 1.0, name: 'Amérissage', desc: 'Plouf dans l\'Océan Pacifique. Mission accomplie !' }
+            { t: 0.07, name: 'Apogée HEO', desc: 'Point culminant de l\'orbite elliptique haute. Tests systèmes du vaisseau Orion.' },
+            { t: 0.12, name: 'Injection Trans-Lunaire', desc: 'Burn TLI au point de périgée. Voyage de ~4 jours vers la Lune.' },
+            { t: 0.50, name: 'Survol Lunaire (Flyby)', desc: 'Passage à ~4700 miles derrière la face cachée. Vue de la Terre et de la Lune.' },
+            { t: 0.94, name: 'Séparation CM/SM', desc: 'Le Crew Module se sépare du Service Module (CM/SM Separation) avant la rentrée.' },
+            { t: 0.97, name: 'Entry Interface', desc: 'Rentrée atmosphérique à environ 25 000 mph (40 000 km/h).' },
+            { t: 1.0, name: 'Amérissage', desc: 'Déploiement des 11 parachutes et splashdown dans l\'Océan Pacifique à ~20 mph.' }
         ];
 
         this.updateCurve(100);
     }
 
     updateCurve(moonDist = 100) {
-        // La mission Artemis 2 dure 10 jours. L'orbite lunaire prend 27.3 jours.
+        const earthR = 5;
         const missionDuration = 10;
         const lunarOrbitPeriod = 27.3;
         const orbitFactor = missionDuration / lunarOrbitPeriod;
 
-        // Calcul de la position relative de la Lune par rapport à la Terre à l'instant T (0 à 1)
+        // Position de la Lune en fonction du temps de mission (0 → 1)
         const getMoonPos = (t) => {
-            // L'angle 0 est l'angle de départ de la Lune à t=0
             const angle = t * orbitFactor * Math.PI * 2;
             return new THREE.Vector3(Math.cos(angle) * moonDist, 0, Math.sin(angle) * moonDist);
         };
 
-        // On définit les points de contrôle pour former un '8' fluide
-        // La Lune se déplace, donc la trajectoire doit intercepter la lune à t=0.5
+        // Position de la Lune au moment du survol (~jour 5 sur 10)
         const moonAtFlyby = getMoonPos(0.5);
-        const moonDir = moonAtFlyby.clone().normalize();
-        const moonSide = new THREE.Vector3(-moonDir.z, 0, moonDir.x); // Tangente à l'orbite
+        const moonDir = moonAtFlyby.clone().normalize();           // direction Terre → Lune
+        const moonSide = new THREE.Vector3(-moonDir.z, 0, moonDir.x); // perpendiculaire (plan xz)
+
+        // ──────────────────────────────────────────────────────────
+        // Orbite elliptique haute (HEO) pré-TLI
+        // Périgée bas, apogée haute et bien visible
+        // ──────────────────────────────────────────────────────────
+        const perigeeR = earthR + 1.5;    // ~8 300 km d'altitude
+        const apogeeR  = earthR * 6;      // ~32 000 km d'altitude
+        const sma      = (perigeeR + apogeeR) / 2;
+        const ecc      = (apogeeR - perigeeR) / (apogeeR + perigeeR);
+        const semiLat  = sma * (1 - ecc * ecc);
+
+        // Génère un point sur l'ellipse képlérienne (foyer = Terre)
+        // θ = 0 → périgée (direction +moonSide)
+        // θ = π → apogée  (direction -moonSide)
+        // Au périgée la vitesse tangentielle pointe en +moonDir → idéal pour le TLI
+        const orbitPt = (theta, y = 0) => {
+            const r = semiLat / (1 + ecc * Math.cos(theta));
+            return moonSide.clone().multiplyScalar(r * Math.cos(theta))
+                .add(moonDir.clone().multiplyScalar(r * Math.sin(theta)))
+                .setY(y);
+        };
+
+        const PI = Math.PI;
 
         const points = [
-            new THREE.Vector3(5.0, 0, 0),           // 0.0 Décollage (proche Terre)
-            new THREE.Vector3(6, 0.5, 0.5),         // Ascension
-            new THREE.Vector3(10, 2, 5),            // 0.05 Orbite de parking
-            new THREE.Vector3(30, 5, 15),           // 0.12 Injection Trans-Lunaire (TLI)
-            
-            // On s'approche de la Lune par le côté "intérieur" (devant elle)
-            moonAtFlyby.clone().add(moonSide.clone().multiplyScalar(35)).add(moonDir.clone().multiplyScalar(-25)),
-            
-            // On passe derrière la face cachée (Flyby)
-            // moonAtFlyby est à la distance moonDist, on rajoute 15 pour être à 315 (derrière)
-            moonAtFlyby.clone().add(moonDir.clone().multiplyScalar(15)), 
-            
-            // On ressort par l'autre côté pour revenir vers la Terre
-            moonAtFlyby.clone().add(moonSide.clone().multiplyScalar(-35)).add(moonDir.clone().multiplyScalar(-25)),
-            
-            new THREE.Vector3(30, -5, -15),         // Mi-chemin retour
-            new THREE.Vector3(8, 0, 2),             // 0.92 Réentrée atmosphérique
-            new THREE.Vector3(6, -0.5, 0.5),        // Approche finale
-            new THREE.Vector3(5.0, 0, 0)            // 1.0 Splashdown
+            // ═══ PHASE 1 : DÉCOLLAGE ═══
+            moonSide.clone().multiplyScalar(earthR + 0.3).setY(0),
+
+            // ═══ PHASE 2 : ORBITE ELLIPTIQUE HAUTE (HEO) ═══
+            // Montée vers l'apogée (grande apogée)
+            orbitPt(PI * 0.25, 0.8),
+            orbitPt(PI * 0.50, 1.5),
+            orbitPt(PI * 0.75, 2.2),
+            orbitPt(PI,        2.5),         // ← APOGÉE (point culminant)
+            // Redescente vers le périgée (petit périgée)
+            orbitPt(PI * 1.25, 2.0),
+            orbitPt(PI * 1.50, 1.2),
+            orbitPt(PI * 1.75, 0.5),
+
+            // ═══ PHASE 3 : INJECTION TRANS-LUNAIRE AU PÉRIGÉE ═══
+            // Le burn TLI a lieu ici, au point le plus bas de l'orbite
+            moonSide.clone().multiplyScalar(perigeeR).setY(0),
+
+            // ═══ PHASE 4 : TRANSIT TERRE → LUNE (Voyage de ~4 jours) ═══
+            // Trajectoire aller : on passe "devant" (côté +moonSide) et on s'élève un peu pour la figure en 8
+            moonDir.clone().multiplyScalar(moonDist * 0.3)
+                .add(moonSide.clone().multiplyScalar(moonDist * 0.20))
+                .setY(5.0),
+
+            moonDir.clone().multiplyScalar(moonDist * 0.7)
+                .add(moonSide.clone().multiplyScalar(moonDist * 0.25))
+                .setY(3.0),
+
+            // ═══ PHASE 5 : SURVOL LUNAIRE (FLYBY) ═══
+            // Survol lointain à environ ~4700 miles derrière la face cachée (donc plus loin de la surface lunaire).
+            // La lune est à 'moonAtFlyby', et a un rayon de ~1.35 unités dans la scène.
+            // On s'éloigne notablement du côté opposé à la Terre (prolongation sur l'axe moonDir).
+
+            // 1. Approche par le côté (+moonSide)
+            moonAtFlyby.clone()
+                .add(moonSide.clone().multiplyScalar(15))
+                .add(moonDir.clone().multiplyScalar(-5))
+                .setY(1.0),
+
+            // 2. Point le plus lointain ("4700 miles beyond the far side")
+            // On le place largement derrière la lune par rapport à la Terre
+            moonAtFlyby.clone()
+                .add(moonDir.clone().multiplyScalar(22))
+                .setY(0),
+
+            // 3. Sortie du survol (-moonSide), marquant l'inversion caractéristique de la figure en 8
+            moonAtFlyby.clone()
+                .add(moonSide.clone().multiplyScalar(-15))
+                .add(moonDir.clone().multiplyScalar(-5))
+                .setY(-1.0),
+
+            // ═══ PHASE 6 : TRANSIT RETOUR LUNE → TERRE ═══
+            // On croise l'axe Terre-Lune par en-dessous / l'autre côté pour finaliser la boucle en 8.
+            moonDir.clone().multiplyScalar(moonDist * 0.7)
+                .add(moonSide.clone().multiplyScalar(-moonDist * 0.25))
+                .setY(-3.0),
+
+            moonDir.clone().multiplyScalar(moonDist * 0.3)
+                .add(moonSide.clone().multiplyScalar(-moonDist * 0.20))
+                .setY(-5.0),
+
+            // ═══ PHASE 7 : SÉPARATION CM/SM & RÉENTRÉE ATMOSPHÉRIQUE (Entry Interface) ═══
+            moonDir.clone().multiplyScalar(earthR * 3.5)
+                .add(moonSide.clone().multiplyScalar(-earthR * 2.0))
+                .setY(-1.0),
+
+            moonDir.clone().multiplyScalar(earthR * 1.5)
+                .add(moonSide.clone().multiplyScalar(-earthR * 1.0))
+                .setY(-0.2),
+
+            // ═══ PHASE 8 : AMERISSAGE ═══
+            // Avec les parachutes dans le Pacifique
+            new THREE.Vector3().copy(moonDir).multiplyScalar(0.1)
+                .add(moonSide.clone().multiplyScalar(-0.8))
+                .normalize()
+                .multiplyScalar(earthR + 0.3),
         ];
 
         this.curve = new THREE.CatmullRomCurve3(points, false, 'chordal');
         this.curve.arcLengthDivisions = 1000;
-        
+
         if (this.line) {
             const newPoints = this.curve.getSpacedPoints(1000);
             this.line.geometry.setFromPoints(newPoints);

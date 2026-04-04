@@ -277,8 +277,8 @@ const updateMissionLogic = (percent) => {
     bioHeart.innerText = `${Math.floor(heartVal)} BPM`;
     bioO2.innerText = `${(98 - percent * 2).toFixed(1)}%`;
     
-    // Radiations (Van Allen)
-    const isInVanAllen = percent > 0.02 && percent < 0.15;
+    // Radiations (Van Allen) — traversée pendant la phase orbitale HEO
+    const isInVanAllen = percent > 0.01 && percent < 0.13;
     const radVal = isInVanAllen ? (0.5 + Math.random() * 2) : (0.05 + Math.random() * 0.02);
     bioRad.innerText = `${radVal.toFixed(2)} mSv/h`;
 
@@ -293,8 +293,8 @@ const updateMissionLogic = (percent) => {
         toast.classList.remove('flex');
     }
 
-    // Van Allen Alert (Jour 1 et 2 -> t entre 0.02 et 0.2 approx)
-    if (percent > 0.02 && percent < 0.15) {
+    // Van Allen Alert (traversée des ceintures pendant la phase HEO)
+    if (percent > 0.01 && percent < 0.13) {
         vanAllenAlert.classList.remove('hidden');
     } else {
         vanAllenAlert.classList.add('hidden');
