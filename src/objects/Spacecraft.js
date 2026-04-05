@@ -191,6 +191,7 @@ export class Spacecraft {
             map: hullDiffuseTexture,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             transparent: true,
             alphaMap: hullAlphaTexture,
             alphaTest: 0.5,
@@ -209,6 +210,7 @@ export class Spacecraft {
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
         });
 
         // MLI
@@ -216,6 +218,7 @@ export class Spacecraft {
             color: 0xeaeaea,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
         });
 
         // Panneaux
@@ -223,6 +226,7 @@ export class Spacecraft {
             color: 0x050b14,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             bumpMap: solarBumpTexture,
             bumpScale: 0.002,
             side: THREE.DoubleSide
@@ -232,6 +236,7 @@ export class Spacecraft {
             color: 0xffffff,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             side: THREE.DoubleSide
         });
 
@@ -250,6 +255,7 @@ export class Spacecraft {
             color: 0xdddddd,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             side: THREE.DoubleSide
         });
         const topCapGeo = new THREE.CircleGeometry(0.18, 64);
@@ -274,6 +280,7 @@ export class Spacecraft {
             color: 0xdddddd,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             side: THREE.DoubleSide
         });
         const dock = new THREE.Mesh(dockGeo, dockMat);
@@ -285,7 +292,7 @@ export class Spacecraft {
 
         // Ecrans MFD (Multifunction Displays) qui éclairent l'avant
         const screenGeo = new THREE.PlaneGeometry(0.15, 0.06);
-        const screenMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, side: THREE.DoubleSide }); // Cyan brillant
+        const screenMat = new THREE.MeshBasicMaterial({ color: 0x005566, side: THREE.DoubleSide }); // Écran tamisé
         const screen1 = new THREE.Mesh(screenGeo, screenMat);
         screen1.position.set(0, 0.05, 0.18);
         screen1.rotation.x = -Math.PI / 4;
@@ -316,7 +323,7 @@ export class Spacecraft {
         interiorGroup.add(floor);
 
         // Lumière locale pour éclairer cet intérieur à travers la vitre !
-        const intLight = new THREE.PointLight(0xffeedd, 0.3, 0.5);
+        const intLight = new THREE.PointLight(0xffeedd, 0.1, 0.5);
         intLight.position.set(0, 0.0, 0.1);
         interiorGroup.add(intLight);
 
@@ -342,6 +349,7 @@ export class Spacecraft {
             color: 0x223344,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             transparent: true,
             opacity: 0.4,
             side: THREE.DoubleSide
@@ -401,6 +409,7 @@ export class Spacecraft {
             color: 0xf0ece0,
             metalness: 0.0,
             roughness: 1.0,
+            reflectivity: 0,
             side: THREE.DoubleSide
         });
 
@@ -586,6 +595,18 @@ export class Spacecraft {
         this.particles = this.createParticles();
         group.add(this.particles);
 
+        // Anchors dedies pour la vue hublot afin d'eviter le clipping dans la coque.
+        const hublotCameraAnchor = new THREE.Object3D();
+        hublotCameraAnchor.position.set(0, 0.09, 0.29);
+        group.add(hublotCameraAnchor);
+
+        const hublotLookAnchor = new THREE.Object3D();
+        hublotLookAnchor.position.set(0, 0.11, 4.0);
+        group.add(hublotLookAnchor);
+
+        group.userData.hublotCameraAnchor = hublotCameraAnchor;
+        group.userData.hublotLookAnchor = hublotLookAnchor;
+
         group.name = this.name;
         return group;
     }
@@ -686,6 +707,29 @@ export class Spacecraft {
 
         this.gravityLune.setDirection(localDirLune);
         this.gravityLune.setLength(Math.min(10, forceLune), 0.5, 0.2);
+    }
+
+    // --- NOUVEAU: Génère des Hotspots/Annotations sur le vaisseau (Pédagogique) ---
+    createHotspots() {
+        const createSpot = (pos, title, desc) => {
+            const geo = new THREE.SphereGeometry(0.015, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x993333, transparent: true, opacity: 0.5 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(pos);
+            // Ajoute un halo
+            const haloGeo = new THREE.SphereGeometry(0.025, 16, 16);
+            const haloMat = new THREE.MeshBasicMaterial({ color: 0x993333, transparent: true, opacity: 0.15 });
+            mesh.add(new THREE.Mesh(haloGeo, haloMat));
+
+            mesh.userData = { isHotspot: true, title, desc };
+            return mesh;
+        };
+
+        // On attache ces hotspots au mesh principal
+        this.mesh.add(createSpot(new THREE.Vector3(0, 0.1, 0.15), 'Crew Module (CM)', "L'habitacle où séjournent les 4 astronautes pendant la majorité du trajet."));
+        this.mesh.add(createSpot(new THREE.Vector3(0, -0.3, 0), 'European Service Module (ESM)', "Fourni par l'ESA, il réunit la propulsion, l'alimentation (eau, air) et régule la température."));
+        this.mesh.add(createSpot(new THREE.Vector3(0.5, -0.325, 0), 'Panneaux Solaires (X-Wing)', "4 panneaux orientables capables de générer jusqu'à 11 kW d'énergie pour alimenter Orion."));
+        this.mesh.add(createSpot(new THREE.Vector3(0, -0.65, 0), 'Moteur Principal (OMS)', "Moteur AJ10 réutilisé des anciennes navettes spatiales. Il assure les manoeuvres orbitales majeures."));
     }
 
     getMesh() {

@@ -137,13 +137,20 @@ export class TrajectoryManager {
                 .multiplyScalar(earthR + 0.3),
         ];
 
+        // NOUVEAU: Ajouter les manoeuvres (Burn Nodes / Maneuver nodes visibles)
+        this.burnNodes = [
+            { t: 0.12, type: 'prograde', label: 'TLI Burn' },
+            { t: 0.50, type: 'retrograde', label: 'Lunar Flyby Correction' },
+            { t: 0.97, type: 'retrograde', label: 'Entry Interface' }
+        ];
+
         this.curve = new THREE.CatmullRomCurve3(points, false, 'chordal');
         this.curve.arcLengthDivisions = 1000;
 
         if (this.line) {
             this.line.geometry.dispose();
             // TubeGeometry(curve, tubularSegments, radius, radialSegments, closed)
-            this.line.geometry = new THREE.TubeGeometry(this.curve, 1500, 0.005, 6, false);
+            this.line.geometry = new THREE.TubeGeometry(this.curve, 1500, 0.003, 6, false);
 
             // Mise à jour de la ligne 2D de secours (fallback)
             const fallbackLine = this.line.children.find(c => c.isLine);
@@ -171,9 +178,125 @@ export class TrajectoryManager {
         return this.curve;
     }
 
+    createMilestoneMarker(position, milestone) {
+        const group = new THREE.Group();
+        group.position.copy(position);
+        group.userData.isMilestone = true;
+        group.userData.label = milestone.name;
+
+        const core = new THREE.Mesh(
+            new THREE.SphereGeometry(0.09, 16, 16),
+            new THREE.MeshStandardMaterial({
+                color: 0x5fd4ff,
+                emissive: 0x1a7aa8,
+                emissiveIntensity: 0.8,
+                roughness: 0.3,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.95,
+            })
+        );
+        group.add(core);
+
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x89e2ff,
+            transparent: true,
+            opacity: 0.55,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        });
+
+        const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.01, 10, 42), ringMat);
+        ring1.rotation.x = Math.PI / 2;
+        group.add(ring1);
+
+        const ring2 = new THREE.Mesh(
+            new THREE.TorusGeometry(0.24, 0.008, 10, 42),
+            ringMat.clone()
+        );
+        ring2.material.opacity = 0.35;
+        ring2.rotation.z = Math.PI / 2;
+        group.add(ring2);
+
+        const beacon = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.004, 0.004, 0.5, 8),
+            new THREE.MeshBasicMaterial({
+                color: 0x8ad8ff,
+                transparent: true,
+                opacity: 0.35,
+                depthWrite: false,
+            })
+        );
+        beacon.position.y = 0.25;
+        group.add(beacon);
+
+        const halo = new THREE.Mesh(
+            new THREE.SphereGeometry(0.32, 14, 14),
+            new THREE.MeshBasicMaterial({
+                color: 0x336677,
+                transparent: true,
+                opacity: 0.08,
+                depthWrite: false,
+            })
+        );
+        group.add(halo);
+
+        return group;
+    }
+
+    createBurnNodeMarker(position, node) {
+        const isPrograde = node.type === 'prograde';
+        const accentColor = isPrograde ? 0x3dff9a : 0xffa54a;
+
+        const group = new THREE.Group();
+        group.position.copy(position);
+        group.userData.isMilestone = true;
+        group.userData.isBurnNode = true;
+        group.userData.label = node.label;
+
+        const poly = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.12, 0),
+            new THREE.MeshStandardMaterial({
+                color: accentColor,
+                emissive: accentColor,
+                emissiveIntensity: 0.45,
+                roughness: 0.5,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.9,
+            })
+        );
+        group.add(poly);
+
+        const wire = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.OctahedronGeometry(0.16, 0)),
+            new THREE.LineBasicMaterial({
+                color: accentColor,
+                transparent: true,
+                opacity: 0.65,
+                depthWrite: false,
+            })
+        );
+        group.add(wire);
+
+        const ring = new THREE.Mesh(
+            new THREE.TorusGeometry(0.2, 0.008, 8, 36),
+            new THREE.MeshBasicMaterial({
+                color: accentColor,
+                transparent: true,
+                opacity: 0.5,
+                depthWrite: false,
+            })
+        );
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+
+        return group;
+    }
+
     drawTrajectory(scene) {
         // Tube 3D fin et discret
-        const geometry = new THREE.TubeGeometry(this.curve, 1500, 0.005, 6, false);
+        const geometry = new THREE.TubeGeometry(this.curve, 1500, 0.003, 6, false);
 
         const material = new THREE.MeshBasicMaterial({
             color: 0xaabbcc,
@@ -195,24 +318,24 @@ export class TrajectoryManager {
 
         scene.add(this.line);
 
-        // Ajouter les sphères pour les milestones
+        // Ajouter des points de passage stylises (type simulation)
         this.milestones.forEach(m => {
             const pos = this.curve.getPointAt(m.t);
-            const markerGeo = new THREE.SphereGeometry(0.15, 16, 16);
-            const markerMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 });
-            const marker = new THREE.Mesh(markerGeo, markerMat);
-            marker.position.copy(pos);
-            marker.userData.isMilestone = true;
-            
-            // Halo lumineux
-            const glowGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2 });
-            const glow = new THREE.Mesh(glowGeo, glowMat);
-            marker.add(glow);
+            const marker = this.createMilestoneMarker(pos, m);
 
             scene.add(marker);
             this.milestoneMarkers.push(marker);
         });
+
+        // Dessiner les Burn Nodes
+        if (this.burnNodes) {
+             this.burnNodes.forEach(node => {
+                 const pos = this.curve.getPointAt(node.t);
+                 const burnMarker = this.createBurnNodeMarker(pos, node);
+                 scene.add(burnMarker);
+                 this.milestoneMarkers.push(burnMarker);
+             });
+        }
 
         return this.line;
     }

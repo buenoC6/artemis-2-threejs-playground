@@ -60,6 +60,10 @@
                         <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Dist. Terre</p>
                         <span id="distance-info" class="font-mono text-white text-sm block">0 km</span>
                     </div>
+                    <div class="bg-black/40 p-2 rounded-lg">
+                        <p class="text-gray-500 text-[9px] uppercase font-bold tracking-wider">Dist. Lune</p>
+                        <span id="distance-moon-info" class="font-mono text-white text-sm block">0 km</span>
+                    </div>
                 </div>
             </details>
 
@@ -78,7 +82,7 @@
                     <span class="group-open:-rotate-180 transition-transform duration-300 text-white/50">▼</span>
                 </summary>
                 <div class="p-2 pt-0 border-t border-white/5 flex flex-col gap-1 text-left">
-                    <button id="cam-system" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">1. Système Solaire</button>
+                    <button id="cam-system" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">1. Vue de la Terre</button>
                     <button id="cam-orion" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all italic text-left relative overflow-hidden group/btn hover:text-blue-300"><div class="absolute inset-0 bg-blue-500/10 origin-left scale-x-0 group-hover/btn:scale-x-100 transition-transform"></div>2. Suivi Vaisseau Orion</button>
                     <button id="cam-hublot" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">3. Vue Hublot (POV)</button>
                     <button id="cam-moon" class="text-[10px] py-2 px-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-left">4. Observation Lunaire</button>
@@ -118,6 +122,7 @@
                     <button id="toggle-orbit" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all text-center">Orbite: ON</button>
                     <button id="snap-btn" class="text-[9px] py-2 px-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 rounded-lg border border-blue-500/30 transition-all text-center col-span-2">📸 Photo</button>
                     <button id="toggle-forces" class="text-[9px] py-2 px-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 transition-all col-span-2 text-center text-gray-300">Gravité Affichée: OFF</button>
+
 
                     <div class="col-span-2 flex flex-col gap-2 bg-purple-600/10 p-3 rounded-xl border border-purple-500/20 mt-1">
                         <div class="flex justify-between items-center text-purple-300">

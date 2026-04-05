@@ -1,6 +1,7 @@
 import "./style.css";
 import * as THREE from "three";
 import { SceneManager } from "./src/core/SceneManager.js";
+import { TelemetryService } from "./src/core/TelemetryService.js";
 import { CelestialBody } from "./src/objects/CelestialBody.js";
 import { TrajectoryManager } from "./src/objects/TrajectoryManager.js";
 import { Spacecraft } from "./src/objects/Spacecraft.js";
@@ -26,6 +27,8 @@ if (import.meta.env.DEV) {
 // Constantes de temps et progression initiale
 const LAUNCH_DATE = new Date("2026-04-01T15:00:00Z");
 const MISSION_DURATION_MS = 10 * 24 * 60 * 60 * 1000;
+const telemetryService = new TelemetryService({ missionStartDate: LAUNCH_DATE });
+telemetryService.start();
 
 const nowInit = new Date();
 const elapsedInit = nowInit - LAUNCH_DATE;
@@ -75,9 +78,9 @@ sceneManager.add(moonOrbitLine);
 const createHotspot = (pos, data) => {
   const geo = new THREE.SphereGeometry(0.5, 16, 16);
   const mat = new THREE.MeshBasicMaterial({
-    color: 0xffff00,
+    color: 0x887744,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.4,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.copy(pos);
@@ -103,6 +106,7 @@ trajectoryManager.drawTrajectory(earth.getMesh());
 // Capsule Orion (doit être attachée à la Terre)
 const orion = new Spacecraft("Orion");
 orion.getMesh().scale.setScalar(0.03); // Échelle réaliste par rapport aux corps célestes
+orion.createHotspots(); // Active les hotspots pédagogiques 3D
 earth.getMesh().add(orion.getMesh());
 
 // === SÉQUENCE D'INTRODUCTION NARRATIVE ===
@@ -172,7 +176,6 @@ const createDotSprite = () => {
     opacity: 1,
     depthTest: false,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
   });
   const sprite = new THREE.Sprite(mat);
   sprite.scale.set(2, 2, 1);
@@ -301,9 +304,9 @@ setTimeout(() => {
           })
           .start();
 
-        // Bloom vers valeur nominale
+        // Bloom vers valeur nominale adoucie
         new TWEEN.Tween(sceneManager.bloomPass, tweenGroup)
-          .to({ strength: 0.6 }, 4000)
+          .to({ strength: 0.85 }, 4000)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start();
       })
@@ -315,9 +318,9 @@ setTimeout(() => {
       .easing(TWEEN.Easing.Quadratic.InOut)
       .start();
 
-    // Bloom 0 → 1.5 pendant le zoom (apparition progressive de la lumière)
+    // Bloom 0 -> 1.2 pendant le zoom (present mais moins agressif)
     new TWEEN.Tween(sceneManager.bloomPass, tweenGroup)
-      .to({ strength: 1.5 }, 3000)
+      .to({ strength: 1.2 }, 3000)
       .easing(TWEEN.Easing.Quadratic.Out)
       .start();
   }, 500);
@@ -345,10 +348,24 @@ window.addEventListener("keydown", initAudioOnInteraction);
 window.addEventListener("touchstart", initAudioOnInteraction);
 window.addEventListener("mousedown", initAudioOnInteraction);
 
+window.addEventListener("beforeunload", () => {
+  telemetryService.stop();
+});
+
+// NOUVEAU: Chatter Radio NASA aléatoire
+const playRadioChatter = () => {
+  if (!isLive) return; // Uniquement pendant la simu active
+  // Chatter uniquement en Hublot ou Orion Close
+  if (sceneManager.cameraTarget !== orion.getMesh() && !sceneManager.hublotTarget) return;
+  sceneManager.playBip(2000, 0.02); // Petit bip
+  setTimeout(() => sceneManager.playBip(2200, 0.02), 100);
+};
+
 // UI Elements
 const slider = document.getElementById("timeline-slider");
 const missionDay = document.getElementById("mission-day");
 const distanceInfo = document.getElementById("distance-info");
+const distanceMoonInfo = document.getElementById("distance-moon-info");
 const speedInfo = document.getElementById("speed-info");
 const tempInfo = document.getElementById("temp-info");
 const signalDelay = document.getElementById("signal-delay");
@@ -394,24 +411,123 @@ let currentProgress = 0;
 let targetProgress = 0;
 let shipTween = null;
 
-const updateUI = (percent, posLocal, posWorld, milestone) => {
-  // Mise à jour UI : Mission de 10 jours
+const KM_PER_SCENE_UNIT = 1274;
+const LIGHT_SPEED_KM_S = 299792.458;
+
+const getMissionPhaseTargetSpeed = (percent) => {
+  if (percent < 0.05) return THREE.MathUtils.lerp(18000, 28500, percent / 0.05);
+  if (percent < 0.12) return THREE.MathUtils.lerp(28500, 39500, (percent - 0.05) / 0.07);
+  if (percent < 0.5) return THREE.MathUtils.lerp(39500, 9000, (percent - 0.12) / 0.38);
+  if (percent < 0.9) return THREE.MathUtils.lerp(9000, 17000, (percent - 0.5) / 0.4);
+  if (percent < 0.97) return THREE.MathUtils.lerp(17000, 26000, (percent - 0.9) / 0.07);
+  return THREE.MathUtils.lerp(26000, 39000, (percent - 0.97) / 0.03);
+};
+
+const getLocalSpeedSampleKmH = (percent, dp) => {
+  const p0 = Math.max(0, percent - dp);
+  const p1 = Math.min(1, percent + dp);
+  const a = trajectoryManager.curve.getPointAt(p0);
+  const b = trajectoryManager.curve.getPointAt(p1);
+  const travelKm = a.distanceTo(b) * KM_PER_SCENE_UNIT;
+  const deltaHours = Math.max(0.001, (p1 - p0) * (MISSION_DURATION_MS / 3600000));
+  return travelKm / deltaHours;
+};
+
+const estimateSpeedFromTimeline = (percent) => {
+  const s1 = getLocalSpeedSampleKmH(percent, 0.0015);
+  const s2 = getLocalSpeedSampleKmH(percent, 0.0035);
+  const s3 = getLocalSpeedSampleKmH(percent, 0.007);
+  const derivativeSpeed = s1 * 0.55 + s2 * 0.3 + s3 * 0.15;
+
+  const phaseTarget = getMissionPhaseTargetSpeed(percent);
+  const blended = THREE.MathUtils.lerp(derivativeSpeed, phaseTarget, 0.4);
+
+  // Limiteur souple: garde la dynamique tout en evitant les pics abrupts.
+  const minBound = Math.max(7000, phaseTarget * 0.58);
+  const maxBound = Math.min(43000, phaseTarget * 1.42);
+  return THREE.MathUtils.clamp(blended, minBound, maxBound);
+};
+
+const estimateTelemetryFromTimeline = (percent, posLocal) => {
   const totalDays = 10;
-  const currentDay = (percent * totalDays).toFixed(1);
-  missionDay.innerText = `Jour ${currentDay} / ${totalDays}`;
+  const missionLabel = `Jour ${(percent * totalDays).toFixed(2)} / ${totalDays} (EST)`;
 
-  const distUnits = posLocal.length();
-  const distToMoonUnits = posWorld.distanceTo(moonMesh.position);
+  const earthKm = posLocal.length() * KM_PER_SCENE_UNIT;
 
-  const distKm = Math.floor(distUnits * 1274);
+  const moonOrbitPercentOfCircle = 10 / 27.3;
+  const moonAngle = percent * moonOrbitPercentOfCircle * Math.PI * 2;
+  const moonLocalPos = new THREE.Vector3(
+    Math.cos(moonAngle) * moon.currentDist,
+    0,
+    Math.sin(moonAngle) * moon.currentDist,
+  );
+  const moonKm = posLocal.distanceTo(moonLocalPos) * KM_PER_SCENE_UNIT;
+
+  const speedKmH = estimateSpeedFromTimeline(percent);
+
+  let temperatureC = -120 + Math.sin(percent * Math.PI * 6) * 12;
+  if (moonKm < 110000) {
+    const lunarProximity = 1 - THREE.MathUtils.clamp((moonKm - 60000) / 50000, 0, 1);
+    temperatureC += lunarProximity * 8;
+  }
+  if (percent > 0.95) {
+    const reentry = (percent - 0.95) / 0.05;
+    temperatureC = 40 + reentry * 2700;
+  }
+
+  const signalDelayS = earthKm / LIGHT_SPEED_KM_S;
+
+  return {
+    missionLabel,
+    speedKmH,
+    temperatureC,
+    earthKm,
+    moonKm,
+    signalDelayS,
+  };
+};
+
+const updateUI = (percent, posLocal, posWorld, milestone) => {
+  const telemetry = telemetryService.getSnapshot();
+  const estimated = estimateTelemetryFromTimeline(percent, posLocal);
+  const USE_EXTERNAL_ORION_TELEMETRY = false;
+
+  const liveVehicle = telemetry?.vehicle;
+  const liveDistances = telemetry?.distances;
+  const hasLiveCore = USE_EXTERNAL_ORION_TELEMETRY &&
+    (liveVehicle?.status === "live" || liveVehicle?.status === "stale")
+    && Number.isFinite(liveVehicle?.speedKmH)
+    && Number.isFinite(liveDistances?.earthKm)
+    && Number.isFinite(liveDistances?.moonKm);
+
+  missionDay.innerText = hasLiveCore && telemetry?.mission?.label
+    ? `${telemetry.mission.label} (LIVE)`
+    : estimated.missionLabel;
+
+  const tempC = Number.isFinite(liveVehicle?.temperatureC)
+    ? liveVehicle.temperatureC
+    : estimated.temperatureC;
+  tempInfo.innerText = `${tempC.toFixed(1)} °C`;
+  if (tempC > 1000) tempInfo.className = "font-mono text-red-500 text-sm block animate-pulse";
+  else if (tempC > 50) tempInfo.className = "font-mono text-orange-400 text-sm block";
+  else if (tempC < 0) tempInfo.className = "font-mono text-blue-400 text-sm block";
+  else tempInfo.className = "font-mono text-green-400 text-sm block";
+
+  const distKm = Math.round(hasLiveCore ? liveDistances.earthKm : estimated.earthKm);
+  const moonDistKm = Math.round(hasLiveCore ? liveDistances.moonKm : estimated.moonKm);
+
   distanceInfo.innerText = `${distKm.toLocaleString()} km`;
+  if (distanceMoonInfo) {
+    distanceMoonInfo.innerText = `${moonDistKm.toLocaleString()} km`;
+  }
 
-  const speedFactor = 1 / (0.1 + (distUnits / 100) * (distToMoonUnits / 100));
-  const speedKmH = Math.floor(15000 + speedFactor * 20000);
+  const speedKmH = Math.round(hasLiveCore ? liveVehicle.speedKmH : estimated.speedKmH);
   speedInfo.innerText = `${speedKmH.toLocaleString()} km/h`;
 
-  const delay = (distKm / 300000).toFixed(3);
-  signalDelay.innerText = `${delay}s delay`;
+  const delayS = Number.isFinite(liveDistances?.signalDelayS)
+    ? liveDistances.signalDelayS
+    : estimated.signalDelayS;
+  signalDelay.innerText = `${delayS.toFixed(3)}s delay`;
 
   const heartBase = 65 + Math.sin(percent * 50) * 5;
   const heartVal = milestone ? heartBase + 20 : heartBase;
@@ -419,10 +535,20 @@ const updateUI = (percent, posLocal, posWorld, milestone) => {
   bioO2.innerText = `${(98 - percent * 2).toFixed(1)}%`;
 
   const isInVanAllen = percent > 0.01 && percent < 0.13;
-  const radVal = isInVanAllen
-    ? 0.5 + Math.random() * 2
-    : 0.05 + Math.random() * 0.02;
-  bioRad.innerText = `${radVal.toFixed(2)} mSv/h`;
+  const liveWeather = telemetryService.getSnapshot().spaceWeather;
+  let radVal;
+
+  if (liveWeather.status === "live" || liveWeather.status === "stale") {
+    const liveBase = liveWeather.radiationMsVh || 0.08;
+    radVal = isInVanAllen ? liveBase * 1.8 : liveBase;
+    const sourceTag = liveWeather.status === "live" ? "LIVE NOAA" : "STALE NOAA";
+    bioRad.innerText = `${radVal.toFixed(2)} mSv/h (${sourceTag})`;
+  } else {
+    radVal = isInVanAllen
+      ? 0.5 + Math.random() * 2
+      : 0.05 + Math.random() * 0.02;
+    bioRad.innerText = `${radVal.toFixed(2)} mSv/h (SIM)`;
+  }
 
   if (milestone) {
     if (toast.classList.contains("hidden")) sceneManager.playBip();
@@ -624,7 +750,9 @@ slider.addEventListener("input", (e) => {
   liveBtn.innerText = "OFFLINE";
 
   // Mise à jour de la cible, la boucle Render fera le lissage
+  currentProgress = targetValue;
   targetProgress = targetValue;
+  updateMissionLogic(currentProgress);
 });
 
 liveBtn.addEventListener("click", () => {
@@ -804,10 +932,17 @@ sceneManager.render(() => {
     moon.updateOrbitLine(earth.getMesh());
   }
 
-  // Éclairage astronomique : Le Soleil est au centre (0,0,0)
-  // On peut quand même faire varier légèrement la hauteur de la lumière si besoin
-  sceneManager.sunLight.position.set(0, 0, 0);
-  sceneManager.sunLight.target = earth.getMesh();
+  if (earth) {
+    earth.updateAtmosphereLighting(sceneManager.sunLight.position, sceneManager.camera.position);
+  }
+
+  // Chatter Radio Random
+  if (Math.random() < 0.001) { // Faible probabilité à chaque frame
+     playRadioChatter();
+  }
+
+
+  // Eclairage solaire stable: position/target configures une fois a l'initialisation.
 
   handleLiveUpdate();
   stats.end();

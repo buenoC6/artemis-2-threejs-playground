@@ -11,13 +11,15 @@ export class SceneManager {
     constructor(container) {
         this.container = container;
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50000);
-        this.renderer = new THREE.WebGLRenderer({ 
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 50000);
+        this.renderer = new THREE.WebGLRenderer({
             antialias: true,
             preserveDrawingBuffer: true // Requis pour les captures d'écran
         });
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Pas de tone mapping — valeurs brutes, prédictibles, pas de boost surprise
+        this.renderer.toneMapping = THREE.NoToneMapping;
 
         this.labelRenderer = new CSS2DRenderer();
         
@@ -53,7 +55,8 @@ export class SceneManager {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.screenSpacePanning = false;
-        this.controls.minDistance = 0.05;
+        // Plus bas pour eviter le clipping agressif a courte distance (capsule).
+        this.controls.minDistance = 0.02;
         this.controls.maxDistance = 20000;
         
         // Arrêter l'interpolation si l'utilisateur interagit, mais GARDER la cible pour le suivi
@@ -93,12 +96,13 @@ export class SceneManager {
 
         this.camera.position.copy(this.cameraOffset);
 
-        // Lumières (Soleil directionnel fixe)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+        // === ÉCLAIRAGE SPATIAL RÉALISTE ===
+        // Une seule source : le Soleil. Ombres dures, pas de diffusion atmosphérique.
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.03);
         this.scene.add(ambientLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        this.sunLight.position.set(-100, 40, 100); 
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        this.sunLight.position.set(-100, 40, 100);
         this.sunLight.castShadow = true;
         
         // Configuration ombres pour l'espace
@@ -110,6 +114,9 @@ export class SceneManager {
         this.sunLight.shadow.camera.right = 200;
         this.sunLight.shadow.camera.top = 200;
         this.sunLight.shadow.camera.bottom = -200;
+        // Stabilise les ombres et limite le flickering sur les surfaces eclairees.
+        this.sunLight.shadow.bias = -0.00015;
+        this.sunLight.shadow.normalBias = 0.02;
 
         this.scene.add(this.sunLight);
 
@@ -290,9 +297,9 @@ export class SceneManager {
 
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.6, // Force
-            0.4, // Rayon
-            0.85 // Seuil
+            0.85,
+            0.45,
+            0.55
         );
         this.composer.addPass(this.bloomPass);
 
@@ -306,18 +313,20 @@ export class SceneManager {
         this.lookAtTarget = null;
         this.isLerping = false;
         this.controls.enabled = false;
-        // Near clip très proche pour voir l'intérieur du cockpit miniature
-        this.camera.near = 0.001;
+        // Valeurs de clip stables pour eviter les artefacts de precision en POV.
+        this.camera.near = 0.01;
+        this.camera.far = 20000;
         this.camera.updateProjectionMatrix();
     }
 
     setCameraTarget(target, offset = new THREE.Vector3(20, 10, 20), lookAtPos = null, speed = 0.05) {
         this.hublotTarget = null; // Quitter le mode hublot
-        // Restaurer le near clip normal
-        if (this.camera.near < 0.1) {
-            this.camera.near = 0.1;
-            this.camera.updateProjectionMatrix();
+        // Restaurer le near clip normal (plus fin pour les objets proches).
+        if (this.camera.near < 0.01) {
+            this.camera.near = 0.01;
         }
+        this.camera.far = 50000;
+        this.camera.updateProjectionMatrix();
         this.cameraTarget = target;
         this.cameraOffset.copy(offset);
         this.lookAtTarget = lookAtPos;
@@ -335,6 +344,21 @@ export class SceneManager {
             const quat = new THREE.Quaternion();
             this.hublotTarget.getWorldPosition(pos);
             this.hublotTarget.getWorldQuaternion(quat);
+
+            const cameraAnchor = this.hublotTarget.userData?.hublotCameraAnchor;
+            const lookAnchor = this.hublotTarget.userData?.hublotLookAnchor;
+            if (cameraAnchor && lookAnchor) {
+                const cameraWorldPos = new THREE.Vector3();
+                const lookWorldPos = new THREE.Vector3();
+                cameraAnchor.getWorldPosition(cameraWorldPos);
+                lookAnchor.getWorldPosition(lookWorldPos);
+                this.camera.position.copy(cameraWorldPos);
+                this.camera.lookAt(lookWorldPos);
+
+                this.updateLabelsLOD();
+                this.updateMilestonesLOD();
+                return;
+            }
 
             // Offset local : légèrement vers le haut et l'avant du cockpit (échelle 0.03)
             const offset = new THREE.Vector3(0, 0.002, 0.006);
